@@ -1,0 +1,124 @@
+-- Stato attuale di un dispositivo
+
+
+drop function if exists StatoDispositivo;
+delimiter $$
+create function StatoDispositivo(
+    _dispositivo int
+) returns bool not deterministic
+begin
+
+    declare stato_ bool default false;
+
+    with MyLuce as (
+        select d.id_dispositivo as dispositivo, d.stato
+        from (
+            select l.id_dispositivo, al.stato, l.consumo, al.data, ifnull(lead(al.data, 1) over(
+                partition by l.id_dispositivo
+                order by al.data
+            ),now()) as attivita_successiva
+            from Luce l
+                inner join AttivitaLuce al on al.luce = l.id_dispositivo
+            where l.id_dispositivo = _dispositivo
+        ) as d
+        where now() between d.data and d.attivita_successiva
+    ),
+    MyToggle as (
+        select d.id_dispositivo as dispositivo, d.stato
+        from (
+            select t.id_dispositivo, att.stato, t.consumo, att.data, ifnull(lead(att.data, 1) over(
+                partition by t.id_dispositivo
+                order by att.data
+            ), now()) as attivita_successiva
+            from Toggle t
+                inner join AttivitaToggle att on att.toggle = t.id_dispositivo
+            where t.id_dispositivo = _dispositivo
+        ) as d
+        where now() between d.data and d.attivita_successiva
+    ),
+    MyCiclo as (
+        select d.ciclo as dispositivo, (now() between d.data and addtime(d.data, d.durata)) as stato
+        from (
+            select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
+                partition by ac.programma
+                order by ac.data
+            ), now()) as attivita_successiva
+            from AttivitaCiclo ac
+                inner join Programma p on p.id_programma = ac.programma
+            where ac.ciclo = _dispositivo
+        ) as d
+        where now() between d.data and d.attivita_successiva
+    ),
+    MyVariabile as (
+        select d.variabile as dispositivo, (d.livello <> 0) as stato
+        from (
+            select av.variabile, p.consumo, p.livello, av.data, ifnull(lead(av.data, 1) over(
+                partition by av.variabile
+                order by av.data
+            ), now()) as attivita_successiva
+            from AttivitaVariabile av
+                inner join Potenza p on p.id_potenza = av.potenza 
+            where av.variabile = _dispositivo
+        ) as d
+        where now() between d.data and d.attivita_successiva
+    ),
+    MyCondizionatore as (
+        select c.id_dispositivo as dispositivo, (
+                (time(now()) between i.ora_inizio and i.ora_fine) * -- bool
+                (datediff(now(), ac.Data) % ac.intervallo = 0) -- bool
+            ) as stato
+        from AttivitaCondizionatore ac
+            inner join Impostazione i on i.id_impostazione = ac.impostazione
+            inner join Condizionatore c on c.id_dispositivo = ac.condizionatore
+            inner join Dispositivo d on d.id_dispositivo = c.id_dispositivo
+            inner join Stanza s on s.luogo = d.stanza
+            inner join (
+                select se.temperatura, se.stanza, se.data, ifnull(lead(se.data, 1) over(
+                    partition by se.stanza
+                    order by se.data
+                ), now()) as attivita_successiva
+                from Sensore se
+            ) as se on se.stanza = s.luogo
+            where c.id_dispositivo = _dispositivo
+            and now() between se.data and se.attivita_successiva
+    )
+
+    select ifnull(stato,0) into stato_
+    from (
+        select stato
+        from MyLuce
+        where dispositivo is not null
+
+        union
+
+        select stato
+        from MyToggle
+        where dispositivo is not null
+
+        union
+
+        select stato
+        from MyCiclo
+        where dispositivo is not null
+
+        union
+
+        select stato
+        from MyVariabile
+        where dispositivo is not null
+
+        union
+
+        select stato
+        from MyCondizionatore
+        where dispositivo is not null
+    )as d
+    limit 1;
+
+    return stato_;
+
+end $$
+delimiter ;
+
+select StatoDispositivo(d.id_dispositivo)
+from dispositivo d;
