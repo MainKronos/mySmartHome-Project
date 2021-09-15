@@ -1082,7 +1082,7 @@ begin
 
     declare consumo_tot int default 0;
 
-   with consumo_luci as (
+    with consumo_luci as ( -- calcola tutti i consumi delle attività delle luci che rientrano nel range _instant1, _instant2
         select sum(d.stato * d.consumo * time_to_sec(timediff(if(d.data_succ > _instant2, d.data_succ, _instant2), d.data))/60) as consumo
         from (
             select l.id_dispositivo, al.stato, l.consumo, al.data, ifnull(lead(al.data, 1) over(
@@ -1094,7 +1094,7 @@ begin
         ) as d
         where d.data between _instant1 and _instant2
     ),
-    consumo_toggle as (
+    consumo_toggle as ( -- calcola tutti i consumi delle attività dei toggle che rientrano nel range _instant1, _instant2
         select sum(d.stato * d.consumo * time_to_sec(timediff(if(d.data_succ > _instant2, d.data_succ, _instant2), d.data))/60) as consumo
         from (
             select t.id_dispositivo, att.stato, t.consumo, att.data, ifnull(lead(att.data, 1) over(
@@ -1106,7 +1106,7 @@ begin
         ) as d
         where d.data between _instant1 and _instant2
     ),
-    consumo_ciclo as (
+    consumo_ciclo as ( -- calcola tutti i consumi delle attività dei dispositivi a ciclo che rientrano nel range _instant1, _instant2
         select sum(d.durata * d.consumo) as consumo
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
@@ -1118,7 +1118,7 @@ begin
         ) as d
         where d.data between _instant1 and _instant2
     ),
-    consumo_variabile as (
+    consumo_variabile as ( -- calcola tutti i consumi delle attività dei a consumo variabile che rientrano nel range _instant1, _instant2
         select sum(d.consumo * (d.livello <> 0) * time_to_sec(timediff(if(d.data_succ > _instant2, d.data_succ, _instant2), d.data))/60) as consumo
         from (
             select av.variabile, p.consumo, p.livello, av.data, ifnull(lead(av.data, 1) over(
@@ -1130,7 +1130,7 @@ begin
         ) as d
         where d.data between _instant1 and _instant2
     ),
-    consumo_condizionatore as (
+    consumo_condizionatore as ( -- calcola tutti i consumi delle attività dei condizionatori che rientrano nel range _instant1, _instant2
         select sum(EfficienzaEnergeticaStanza(d.stanza, se.data) * abs(se.temperatura - i.temperatura)
             * (time_to_sec(timediff(if(se.data_succ > _instant2, se.data_succ, _instant2), se.data))/60) *
             (i.ora_inizio between time(_instant1) and time(_instant2) ) * -- bool
@@ -1150,6 +1150,7 @@ begin
             where se.data between _instant1 and _instant2
     )
 
+    -- somma tutto quello che ha trovato
     select ifnull(sum(consumo), 0) into consumo_tot
     from (
         select consumo
@@ -1180,7 +1181,7 @@ begin
 end $$
 delimiter ;
 
--- Procedure StatoDispositivo ################################################################################################################
+-- funzione StatoDispositivo ################################################################################################################
 drop function if exists StatoDispositivo;
 delimiter $$
 create function StatoDispositivo(
@@ -1188,9 +1189,9 @@ create function StatoDispositivo(
 ) returns bool not deterministic
 begin
 
-    declare stato_ bool default false;
+    declare stato_ bool default false; -- valore di ritorno
 
-    with MyLuce as (
+    with MyLuce as ( -- calcola lo stato del _dispositivo se fosse una luce
         select d.id_dispositivo as dispositivo, d.stato
         from (
             select l.id_dispositivo, al.stato, l.consumo, al.data, ifnull(lead(al.data, 1) over(
@@ -1203,7 +1204,7 @@ begin
         ) as d
         where now() between d.data and d.attivita_successiva
     ),
-    MyToggle as (
+    MyToggle as ( -- calcola lo stato del _dispositivo se fosse un toggle
         select d.id_dispositivo as dispositivo, d.stato
         from (
             select t.id_dispositivo, att.stato, t.consumo, att.data, ifnull(lead(att.data, 1) over(
@@ -1216,7 +1217,7 @@ begin
         ) as d
         where now() between d.data and d.attivita_successiva
     ),
-    MyCiclo as (
+    MyCiclo as (  -- calcola lo stato del _dispositivo se fosse un dispositivo a ciclo
         select d.ciclo as dispositivo, (now() between d.data and addtime(d.data, d.durata)) as stato
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
@@ -1229,7 +1230,7 @@ begin
         ) as d
         where now() between d.data and d.attivita_successiva
     ),
-    MyVariabile as (
+    MyVariabile as (  -- calcola lo stato del _dispositivo se fosse un dispositivo a consumo variabile
         select d.variabile as dispositivo, (d.livello <> 0) as stato
         from (
             select av.variabile, p.consumo, p.livello, av.data, ifnull(lead(av.data, 1) over(
@@ -1242,7 +1243,7 @@ begin
         ) as d
         where now() between d.data and d.attivita_successiva
     ),
-    MyCondizionatore as (
+    MyCondizionatore as ( -- calcola lo stato del _dispositivo se fosse un condizionatore
         select c.id_dispositivo as dispositivo, (
                 (time(now()) between i.ora_inizio and i.ora_fine) * -- bool
                 (datediff(now(), ac.Data) % ac.intervallo = 0) -- bool
@@ -1253,6 +1254,7 @@ begin
             where c.id_dispositivo = _dispositivo
     )
 
+    -- unisce tutto quello che ha trovato
     select ifnull(stato,0) into stato_
     from (
         select stato
@@ -1820,8 +1822,8 @@ create procedure RegistrazioneUtente(
 )
 begin
 
-    declare check_codice_fiscale boolean default FALSE;
-    declare check_scadenza_documento boolean default FALSE;
+    declare check_codice_fiscale boolean default FALSE; -- controlla la validità del codice fiscale
+    declare check_scadenza_documento boolean default FALSE; -- controlla la validità del documento
 
     set check_codice_fiscale = _codice_fiscale REGEXP '([B-DF-HJ-NP-TV-Z]{3})([B-DF-HJ-NP-TV-Z]{3})(0[1-9]|1[0-2])([A-Z])(0[1-9]|[12][0-9]|3[01])([0-9A-Z]{4})([A-Z])';
     if not check_codice_fiscale then
@@ -1857,13 +1859,13 @@ begin
     declare numero_attivita int default 0;
     declare ultima_attivita int default 0;
 
-    set numero_attivita = (
+    set numero_attivita = ( -- calcola il numero di attività che dovrà aggiungere
         select count(*)
         from Configurazione
         where id_scena = _scena
     );
 
-    set ultima_attivita = (
+    set ultima_attivita = ( -- calcola l'ultima attività registrata
         select id_attivita
         from Attivita
         order by id_attivita desc
@@ -1875,7 +1877,7 @@ begin
     from configurazione c
     where c.id_scena = _scena;
 
-    insert into attivitaluce
+    insert into attivitaluce -- inserisce in attivitaluce tutte le informazione contenute in configurazione
     select row_number() over () + ultima_attivita, c.id_dispositivo, 1, c.temperatura, c.intensita, now()
     from configurazione c
     where c.id_scena = _scena;
@@ -1891,23 +1893,23 @@ in _nome_utente varchar(255), in _ciclo int, in _tipo varchar(255), in _data dat
 ) begin
 
     -- Dichiarazione Variabili
-    declare check_data boolean default FALSE;
-    declare error_data varchar(255) default '';
+    declare check_data boolean default FALSE; -- controlla se la _data è valida
+    declare error_data varchar(255) default ''; -- messaggio di errore
 
-    declare check_nome_utente boolean default FALSE;
-    declare error_nome_utente varchar(255) default '';
+    declare check_nome_utente boolean default FALSE; -- controlla se il _nome_utente è valido
+    declare error_nome_utente varchar(255) default ''; -- messaggio di errore
 
-    declare check_dispositvo boolean default FALSE;
-    declare error_dispositivo varchar(255) default '';
+    declare check_dispositvo boolean default FALSE; -- controlla se _ciclo è un dispositivo a ciclo
+    declare error_dispositivo varchar(255) default ''; -- messaggio di errore
 
-    declare check_tipo boolean default FALSE;
-    declare error_tipo varchar(255) default '';
+    declare check_tipo boolean default FALSE; -- controlla se il tipo di programma _tipo esiste ed appartiene a _ciclo
+    declare error_tipo varchar(255) default ''; -- messaggio di errore
 
-    declare id_attivita_var int default 0;
-    declare id_programma_var int default 0;
+    declare id_attivita_var int default 0; -- variabile di appoggio
+    declare id_programma_var int default 0; -- variabile di appoggio
 
     -- Errore Data
-    set check_data = _data >= now();
+    set check_data = _data >= now(); -- controlla se la _data è valida
     if not check_data then
         select concat('La data ', _data, ' non è valida') into error_data;
         signal sqlstate '45000'
@@ -1915,7 +1917,7 @@ in _nome_utente varchar(255), in _ciclo int, in _tipo varchar(255), in _data dat
     end if;
 
     -- Errore Utente
-    set check_nome_utente = exists(
+    set check_nome_utente = exists( -- controlla se il _nome_utente è valido
         select *
         from Account
         where nome_utente = _nome_utente
@@ -1927,7 +1929,7 @@ in _nome_utente varchar(255), in _ciclo int, in _tipo varchar(255), in _data dat
     end if;
 
     -- Errore Dispositivo
-    set check_dispositvo = exists(
+    set check_dispositvo = exists( -- controlla se _ciclo è un dispositivo a ciclo
         select *
         from Ciclo
         where id_dispositivo = _ciclo
@@ -1939,7 +1941,7 @@ in _nome_utente varchar(255), in _ciclo int, in _tipo varchar(255), in _data dat
     end if ;
 
     -- Errore Tipo
-    set check_tipo = exists(
+    set check_tipo = exists( -- controlla se il tipo di programma _tipo esiste ed appartiene a _ciclo
         select *
         from Programma
         where ciclo = _ciclo
@@ -1989,22 +1991,22 @@ in _nome_utente varchar(255), in _condizionatore int, in _id_impostazione int, i
 ) begin
 
     -- Dichiarazione Variabili
-    declare check_data boolean default FALSE;
-    declare error_data varchar(255) default '';
+    declare check_data boolean default FALSE; -- controlla se _data è una data valida
+    declare error_data varchar(255) default ''; -- messaggio di errore
 
-    declare check_nome_utente boolean default FALSE;
-    declare error_nome_utente varchar(255) default '';
+    declare check_nome_utente boolean default FALSE; -- controlla se _nome_utente è un utente registrato
+    declare error_nome_utente varchar(255) default ''; -- messaggio di errore
 
-    declare check_dispositvo boolean default FALSE;
-    declare error_dispositivo varchar(255) default '';
+    declare check_dispositvo boolean default FALSE; -- controlla se il dispositivo _condizionatore è un condizionatore
+    declare error_dispositivo varchar(255) default ''; -- messaggio di errore
 
-    declare check_id_impostazione boolean default FALSE;
-    declare error_id_impostazione varchar(255) default '';
+    declare check_id_impostazione boolean default FALSE; -- controlla se l'impostazione _id_impostazione esiste ed appartiene a _condizionatore
+    declare error_id_impostazione varchar(255) default ''; -- messaggio di errore
 
-    declare id_attivita_var int default 0;
+    declare id_attivita_var int default 0; -- variabile di appoggio
 
     -- Errore Data
-    set check_data = _data >= now();
+    set check_data = _data >= now(); -- controlla se _data è una data valida
     if not check_data then
         select concat('La data ', _data, ' non è valida') into error_data;
         signal sqlstate '45000'
@@ -2012,7 +2014,7 @@ in _nome_utente varchar(255), in _condizionatore int, in _id_impostazione int, i
     end if;
 
     -- Errore Utente
-    set check_nome_utente = exists(
+    set check_nome_utente = exists( -- controlla se _nome_utente è un utente registrato
         select *
         from Account
         where nome_utente = _nome_utente
@@ -2025,7 +2027,7 @@ in _nome_utente varchar(255), in _condizionatore int, in _id_impostazione int, i
     end if;
 
     -- Errore Dispositivo
-    set check_dispositvo = exists(
+    set check_dispositvo = exists( -- controlla se il dispositivo _condizionatore è un condizionatore
         select *
         from Condizionatore
         where id_dispositivo = _condizionatore
@@ -2037,7 +2039,7 @@ in _nome_utente varchar(255), in _condizionatore int, in _id_impostazione int, i
     end if ;
 
     -- Errore Impostazione
-    set check_id_impostazione = exists(
+    set check_id_impostazione = exists( -- controlla se l'impostazione _id_impostazione esiste ed appartiene a _condizionatore
         select *
         from Impostazione
         where condizionatore = _condizionatore
@@ -2079,19 +2081,19 @@ in _nome_utente varchar(255), in _luce int, in _stato tinyint, in _temperatura i
 ) begin
 
     -- Dichiarazione Variabili
-    declare check_data boolean default FALSE;
-    declare error_data varchar(255) default '';
+    declare check_data boolean default FALSE; -- controlla se _data è una data valida
+    declare error_data varchar(255) default ''; -- messaggio di errore
 
-    declare check_nome_utente boolean default FALSE;
-    declare error_nome_utente varchar(255) default '';
+    declare check_nome_utente boolean default FALSE; -- controlla se _nome_utente è un utente registrato
+    declare error_nome_utente varchar(255) default ''; -- messaggio di errore
 
-    declare check_dispositvo boolean default FALSE;
-    declare error_dispositivo varchar(255) default '';
+    declare check_dispositvo boolean default FALSE; -- controlla se _luce esiste ed è una luce
+    declare error_dispositivo varchar(255) default ''; -- messaggio di errore
 
-    declare id_attivita_var int default 0;
+    declare id_attivita_var int default 0; -- variabile di appoggio
 
     -- Errore Data
-    set check_data = _data >= now();
+    set check_data = _data >= now(); -- controlla se _data è una data valida
     if not check_data then
         select concat('La data ', _data, ' non è valida') into error_data;
         signal sqlstate '45000'
@@ -2099,7 +2101,7 @@ in _nome_utente varchar(255), in _luce int, in _stato tinyint, in _temperatura i
     end if;
 
     -- Errore Utente
-    set check_nome_utente = exists(
+    set check_nome_utente = exists( -- controlla se _nome_utente è un utente registrato
         select *
         from Account
         where nome_utente = _nome_utente
@@ -2112,7 +2114,7 @@ in _nome_utente varchar(255), in _luce int, in _stato tinyint, in _temperatura i
     end if;
 
     -- Errore Dispositivo
-    set check_dispositvo = exists(
+    set check_dispositvo = exists( -- controlla se _luce esiste ed è una luce
         select *
         from Luce
         where id_dispositivo = _luce
@@ -2124,7 +2126,7 @@ in _nome_utente varchar(255), in _luce int, in _stato tinyint, in _temperatura i
     end if ;
 
     -- Errore Stato
-    if not _stato then
+    if not _stato then -- se _stato è OFF allora sia _temperatura che _intensita devono essere a 0
         set _temperatura = 0;
         set _intensita = 0;
     end if;
@@ -2158,19 +2160,19 @@ in _nome_utente varchar(255), in _toggle int, in _stato tinyint, in _data dateti
 ) begin
 
     -- Dichiarazione Variabili
-    declare check_data boolean default FALSE;
-    declare error_data varchar(255) default '';
+    declare check_data boolean default FALSE; -- controlla che _data sia una data valida
+    declare error_data varchar(255) default ''; -- messaggio di errore
 
-    declare check_nome_utente boolean default FALSE;
-    declare error_nome_utente varchar(255) default '';
+    declare check_nome_utente boolean default FALSE; -- controlla che _nome_utente si un utente registrato
+    declare error_nome_utente varchar(255) default ''; -- messaggio di errore
 
-    declare check_dispositvo boolean default FALSE;
-    declare error_dispositivo varchar(255) default '';
+    declare check_dispositvo boolean default FALSE; -- controlla che _toggle sia un dispositivo toggle
+    declare error_dispositivo varchar(255) default ''; -- messaggio di errore
 
     declare id_attivita_var int default 0;
 
     -- Errore Data
-    set check_data = _data >= now();
+    set check_data = _data >= now(); -- controlla che _data sia una data valida
     if not check_data then
         select concat('La data ', _data, ' non è valida') into error_data;
         signal sqlstate '45000'
@@ -2178,7 +2180,7 @@ in _nome_utente varchar(255), in _toggle int, in _stato tinyint, in _data dateti
     end if;
 
     -- Errore Utente
-    set check_nome_utente = exists(
+    set check_nome_utente = exists( -- controlla che _nome_utente si un utente registrato
         select *
         from Account
         where nome_utente = _nome_utente
@@ -2191,7 +2193,7 @@ in _nome_utente varchar(255), in _toggle int, in _stato tinyint, in _data dateti
     end if;
 
     -- Errore Dispositivo
-    set check_dispositvo = exists(
+    set check_dispositvo = exists( -- controlla che _toggle sia un dispositivo toggle
         select *
         from Toggle
         where id_dispositivo = _toggle
@@ -2231,20 +2233,20 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
 ) begin
 
     -- Dichiarazione Variabili
-    declare check_data boolean default FALSE;
-    declare error_data varchar(255) default '';
+    declare check_data boolean default FALSE; -- controlla che _data sia una data valida
+    declare error_data varchar(255) default ''; -- messaggio di errore
 
-    declare check_nome_utente boolean default FALSE;
-    declare error_nome_utente varchar(255) default '';
+    declare check_nome_utente boolean default FALSE; -- controlla se _nome_utente è un utente registrato
+    declare error_nome_utente varchar(255) default ''; -- messaggio di errore
 
-    declare check_dispositvo boolean default FALSE;
-    declare error_dispositivo varchar(255) default '';
+    declare check_dispositvo boolean default FALSE; -- controlla se _variabile sia un dispositivo a consumo variabile
+    declare error_dispositivo varchar(255) default ''; -- messaggio di errore
 
-    declare check_potenza boolean default FALSE;
-    declare error_potenza varchar(255) default '';
+    declare check_potenza boolean default FALSE; -- controlla il livello di potenza _livello esiste ed appartiene a _variabile 
+    declare error_potenza varchar(255) default ''; -- messaggio di errore
 
-    declare id_attivita_var int default 0;
-    declare id_potenza_var int default 0;
+    declare id_attivita_var int default 0; -- variabile di appoggio
+    declare id_potenza_var int default 0; -- variabile di appoggio
 
     -- Errore Data
     set check_data = _data >= now();
