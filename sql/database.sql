@@ -1324,7 +1324,7 @@ Create Procedure Carica_Batteria_MANUAL()
                  fascia_oraria_corrente(E.data_variazione) as id_fascia_oraria
                  
           From Energia E
-          Where E.data_variazione > now() - interval 1 year - interval 3 month - interval 3 day - interval 17 hour
+          Where E.data_variazione > now() - interval 80 minute
        ),
        logtable_produzione_intervallo as 
        (
