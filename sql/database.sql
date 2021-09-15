@@ -694,7 +694,7 @@ begin
         where _instant between d.data and d.attivita_successiva
     ),
     MyCiclo as ( -- consumo del _dispositivo se fosse un dispositivo a ciclo
-        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
+        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, SEC_TO_TIME(d.durata * 60))) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
             d.consumo as consumo
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
@@ -812,7 +812,7 @@ begin
         where _instant between d.data and d.attivita_successiva
     ),
     MyCiclo as (
-        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
+        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, SEC_TO_TIME(d.durata * 60))) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
             d.consumo as consumo 
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
