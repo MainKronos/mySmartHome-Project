@@ -2779,17 +2779,17 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
    Declare TempConsumo integer default 0;
    Declare TempDurata integer default 0;
    Declare TempProgramma varchar(255);
-   Declare timer time;
-   Declare ProduzioneCarica integer default 0;
+   Declare IdDispositivoConsigliato integer default 0;
+   Declare Produzione integer default 0;
    Declare Consumo integer default 0;
-   Declare ProduzioneCaricaConsumo integer default 0;
-   Declare SogliaDiSicurezza integer default 0;
-   Declare MessaggioNotifica varchar(255);
-   Declare Finito integer default 0;
    Declare CaricaBatteria integer default 0;
+   Declare ImmissioneBatteria integer default 0;
    Declare UsoBatteria tinyint default 0;
    
-   Declare cursoreOttimizzazioneConsumi Cursor For
+   Drop temporary table if exists risultati;
+   
+   Create temporary table risultati
+      (
       
       with DispositiviACicloPocoUsati as    -- questa cte contiene i dispositivi a ciclo non interrompibile che non sono stati utilizzati da più di un giorno
      (
@@ -2798,17 +2798,17 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
              right outer join
              Ciclo C
              on AC.Ciclo = C.id_dispositivo
-        where AC.Data is null 
+	    where AC.Data is null 
               or
               (
-                 AC.Data is not null 
+			     AC.Data is not null 
                  and
                  Datediff(current_date(),AC.Data) > 1 
-              )
+			  )
      ),
      DispositiviEProgrammiIdonei as    -- questa cte contiene i dispositivi a ciclo non interrompibile che hanno un programma che può essere completato entro le 18 
      (                                 -- (si presume che la produzione elettrica dopo le 18 cali drasticamente per via del tramonto del sole)
-        select rank() over (order by P.Durata Desc,P.Consumo Desc),
+        select rank() over (order by P.Durata Desc,P.Consumo Desc) as ordine,
                DAC.id_dispositivo,
                P.Consumo,
                P.Durata,
@@ -2819,14 +2819,38 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
               on P.ciclo = DAC.id_dispositivo
               
         where 18 - hour(now()) - minute(now())/60 > P.durata/60
-              and 
+	          and 
               hour(now()) + minute(now())/60 - 6 > P.durata/60
      )
-      Select DPI.Id_Dispositivo,DPI.Consumo,DPI.Durata,DPI.Tipo
-      From DispositiviEProgrammiIdonei DPI;
-      
-   Declare continue handler
-      for not found set finito = 1;
+     
+	  Select DPI.id_dispositivo,DPI.consumo,DPI.durata,DPI.tipo
+      From DispositiviEProgrammiIdonei DPI
+      Where DPI.ordine = 1
+    );  
+    
+   Set TempIdDispositivo = 
+   (
+      Select R.id_dispositivo
+      From risultati R
+   );
+   
+    Set TempConsumo = 
+   (
+      Select R.consumo
+      From risultati R
+   );
+   
+    Set TempDurata = 
+   (
+      Select R.durata
+      From risultati R
+   );
+   
+    Set TempProgramma = 
+   (
+      Select R.tipo
+      From risultati R
+   );
    
    Set CaricaBatteria = 
    (
@@ -2834,22 +2858,20 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
       From Batteria
    );
    
-   
-   
    set ContatoreDispositiviPocoUsati =    -- qui viene calcolato il numero di dispositivi a ciclo non interrompibile che non vengono utilizzati da un giorno o più
-     (
-        select count(distinct C.id_dispositivo)
+	 (
+		select count(distinct C.id_dispositivo)
         from AttivitaCiclo AC
              right outer join
              Ciclo C
              on AC.Ciclo = C.id_dispositivo
-        where AC.Data is null 
+	    where AC.Data is null 
               or
               (
-                 AC.Data is not null 
+			     AC.Data is not null 
                  and
                  Datediff(current_date(),AC.Data) > 1 
-              )
+			  )
      );
    
    Set UsoBatteria =   -- prende l'usobatteria della fasciaoraria corrente
@@ -2858,91 +2880,122 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
       From ImpostazioneFasciaOraria IFO
       Where IFO.id_fascia_oraria = 
                               (
-                                 Select distinct E.id_fascia_oraria
+                                 Select distinct fascia_oraria_corrente(E.data_variazione)
                                  From Energia E
                                  Where E.data_variazione >= all 
-                                                             (
+															 (
                                                                 Select E2.data_variazione
                                                                 From Energia E2
                                                              )
                               
                               )
-     
+	 
    );
    
-   Set ProduzioneCarica =  ProduzioneIstantanea() + UsoBatteria * CaricaBatteria;
+   Set Produzione = ProduzioneIstantanea();
    
-   Set timer = time(now());
+   Set ImmissioneBatteria =  UsoBatteria * CaricaBatteria;
+
+   Set Consumo = ConsumoTot(now());
    
-   Set Consumo = ConsumoTot(current_timestamp);
+   Set IdDispositivoConsigliato = PeriodAnalytics(now());
    
-   Set ProduzioneCaricaConsumo = ProduzioneCarica - Consumo;
-   
-    if ContatoreDispositiviPocoUsati = 0 and ProduzioneCaricaConsumo > 0 then       -- se non esistono dispositivi a ciclo non interrompibile attivabili allora ci limitiamo 
-                                                                                    -- a segnalare all'utente una eventuale eccedenza di produzione elettrica 
-        Set ProduzioneCarica = ProduzioneCarica + Broadcast(concat('hai ', ProduzioneCaricaConsumo, ' Kw disponibili, usali'),-1);
+   Case
+		
+      when(Produzione - Consumo < 200 and Produzione - Consumo > - 200) then
+		   
+	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è alta'),-1);
+		
+	  when(Produzione - Consumo < 400 and Produzione - Consumo >= 200) then
         
-    elseif ProduzioneCaricaConsumo < 0 then
-       
-       if ProduzioneCarica/Consumo < 0.6 then  -- se l'utente sta consumando molto di più di quanto sta producendo gli viene inviata una notifica
+		 Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è media',
+																	', potresti voler attivare il dispositivo ',
+																	(
+																	   Select D.Nome
+																	   From Dispositivo D
+																	   Where D.id_dispositivo = IdDispositivoConsigliato
+																	),
+																	' che si trova in ',
+																	(
+																	   Select L.Nome 
+																	   From Luogo L 
+																		    inner join 
+																		    Dispositivo D 
+																		    on L.id_luogo = D.stanza
+																	   Where D.id_dispositivo = IdDispositivoConsigliato
+																	)
+																   ),IdDispositivoConsigliato
+															);
+                                                                
+	  when(Produzione - Consumo < -200 and Produzione - Consumo > -400) then
+		   
+	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è media'),-1);
            
-             Set ProduzioneCarica = ProduzioneCarica +  Broadcast(concat('stai prelevando ', -ProduzioneCaricaConsumo, ' W  dalla rete'),-1);
-       
-       end if;
-       
-     else
-     
-        Open cursoreOttimizzazioneConsumi;
-        preleva: Loop
-        fetch cursoreOttimizzazioneConsumi into TempIdDispositivo,TempConsumo,TempDurata,TempProgramma;
-        if finito = 1 then
-        
-           leave preleva;
-           
-        end if;
-        
-        if ProduzioneCaricaConsumo - TempConsumo > TempConsumo/100 * 30 
-           and
-           18 - hour(timer) - minute(timer)/60 > TempDurata/60
-           and 
-           hour(timer) + minute(timer)/60 - 6 > TempDurata/60
+	  when(Produzione - Consumo >= 400) then
+		   
+		 Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è bassa',
+																	  ', potresti voler attivare il dispositivo ',
+                                                                      (
+																         Select D.Nome
+																		 From Dispositivo D
+																		 Where D.id_dispositivo = IdDispositivoConsigliato
+																	   ),
+                                                                       ' che si trova in ',
+																	   (
+																	      Select L.Nome 
+																		  From Luogo L 
+																			   inner join 
+																			   Dispositivo D 
+																			   on L.id_luogo = D.stanza
+																		  Where D.id_dispositivo = IdDispositivoConsigliato
+																	   )
+                                                                      ),IdDispositivoConsigliato
+																);
+	      
+          if ContatoreDispositiviPocoUsati <> 0 then                                                            
+    
+             if Produzione + ImmissioneBatteria - Consumo - TempConsumo > TempConsumo/100 * 30 
+                and
+                18 - hour(now()) - minute(now())/60 > TempDurata/60
+		        and 
+		        hour(now()) + minute(now())/60 - 6 > TempDurata/60
               
-           then          -- se c'e abbastanza produzione da permettere l'avvio di un programma di un dispositivo a ciclo non interrompibile
-        
-           set ProduzioneCaricaConsumo = ProduzioneCaricaConsumo - TempConsumo;  -- senza ricorrere al prelievo di energia dalla rete, allora viene consigliato all'utente di avviare il programma in questione
-           
-             Set ProduzioneCarica = ProduzioneCarica + Broadcast(concat(
-                                                                          'puoi avviare il programma ', 
-                                                                          TempProgramma,
+			 then          -- se c'e abbastanza produzione da permettere l'avvio di un programma di un dispositivo a ciclo non interrompibile
+                           -- senza ricorrere al prelievo di energia dalla rete, allora viene consigliato all'utente di avviare il programma in questione
+             Set Produzione = Produzione + Broadcast(concat('Puoi avviare il programma ', 
+																		  TempProgramma,
                                                                           ' del dispositivo ',
                                                                           (
-                                                                             Select Nome 
-                                                                             From Dispositivo 
-                                                                             Where id_dispositivo = TempIdDispositivo
-                                                                          ), 
+																	         Select Nome 
+																			 From Dispositivo 
+																		     Where id_dispositivo = TempIdDispositivo
+																		  ), 
                                                                           ' che si trova in ', 
-                                                                          (
-                                                                             Select L.Nome 
-                                                                             From Luogo L 
-                                                                                  inner join 
-                                                                                  Dispositivo D 
-                                                                                  on L.id_luogo = D.stanza
-                                                                             Where D.id_dispositivo = TempIdDispositivo
-                                                                           )
-                                                                         ),TempIdDispositivo
-                                                                 );
-            Set timer = timer + interval TempDurata minute;
-        else
+																		  (
+																		     Select L.Nome 
+																			 From Luogo L 
+																				  inner join 
+																				  Dispositivo D 
+																				  on L.id_luogo = D.stanza
+																			 Where D.id_dispositivo = TempIdDispositivo
+																		   )
+							                                             ),TempIdDispositivo
+																 );
            
-           leave preleva;
-           
-        end if;
+		      end if;
+
+	     end if;
+         
+	  when(Produzione - Consumo <= -400) then
         
-    end loop preleva;
-    close cursoreOttimizzazioneConsumi;
-    
-    end if;
-      
+	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è bassa',
+                                                                      ' stai prelevando ',
+                                                                      - (Produzione + ImmissioneBatteria - Consumo),
+                                                                      ' W dalla rete'
+                                                                     ),-1);
+      else begin end;     
+	  End case;
+                                                                    
 End $$
 Delimiter ;
 
