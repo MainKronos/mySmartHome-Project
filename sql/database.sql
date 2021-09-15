@@ -2585,7 +2585,7 @@ begin
 end $$
 delimiter ;
 
--- TRIGGERS
+    -- TRIGGERS
 
 drop trigger if exists AbitudiniUtenti_TRIGGER_TOGGLE;
 create trigger AbitudiniUtenti_TRIGGER_TOGGLE after insert on attivitatoggle
@@ -2603,11 +2603,7 @@ drop trigger if exists AbitudiniUtenti_TRIGGER_VARIABILE;
 create trigger AbitudiniUtenti_TRIGGER_VARIABILE after insert on attivitavariabile
 for each row call AbitudiniUtenti_PARTIAL(new.id_attivita);
 
-
--- ############################################################################################################
-
-
-
+    -- ###########
 
 drop procedure if exists NotificaAbitudini_MANUAL;
 delimiter $$
@@ -2760,13 +2756,11 @@ end $$
 delimiter ;
 
 
- -- ############################################################################################################
+-- ############################################################################################################
 
 
 Drop Procedure if exists OttimizzazioneConsumi_MANUAL; 
-
 Delimiter $$
-
 Create Procedure OttimizzazioneConsumi_MANUAL()
    
    Begin
