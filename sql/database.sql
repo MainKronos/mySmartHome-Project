@@ -2332,13 +2332,13 @@ delimiter ;
 --   begin
 --   Delete from Energia 
 --   Where data_variazione < now() - interval 1 month; 
---   
+   
 --   Delete from Sensore
 --   Where data < now() - interval 1 month;
---   
+   
 --   Delete from SensoreEsterno
 --   Where data < now() - interval 1 month;
---   
+   
 --   Delete from Attivita 
 --   Where id_attivita in
 --   (
@@ -2346,10 +2346,10 @@ delimiter ;
 --      From Accesso
 --      Where data < now() - interval 1 month
 --   );
---   
+   
 --   Delete from Notifica
 --   Where data < now() - interval 1 month;
---   
+   
 --   end $$
    
 -- Delimiter $$
