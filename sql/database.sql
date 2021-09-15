@@ -2249,7 +2249,7 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
     declare id_potenza_var int default 0; -- variabile di appoggio
 
     -- Errore Data
-    set check_data = _data >= now();
+    set check_data = _data >= now(); -- controlla che _data sia una data valida
     if not check_data then
         select concat('La data ', _data, ' non è valida') into error_data;
         signal sqlstate '45000'
@@ -2257,7 +2257,7 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
     end if;
 
     -- Errore Utente
-    set check_nome_utente = exists(
+    set check_nome_utente = exists( -- controlla se _nome_utente è un utente registrato
         select *
         from Account
         where nome_utente = _nome_utente
@@ -2270,7 +2270,7 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
     end if;
 
     -- Errore Dispositivo
-    set check_dispositvo = exists(
+    set check_dispositvo = exists( -- controlla se _variabile sia un dispositivo a consumo variabile
         select *
         from Variabile
         where id_dispositivo = _variabile
@@ -2282,7 +2282,7 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
     end if ;
 
     -- Errore Potenza
-    set check_potenza = exists(
+    set check_potenza = exists( -- controlla il livello di potenza _livello esiste ed appartiene a _variabile 
         select *
         from Potenza
         where variabile = _variabile
@@ -2354,7 +2354,6 @@ do
 Delimiter $$
 
 -- Procedure Statistiche_MANUAL #####################################################################################################################
-
 Drop procedure if exists Statistiche_MANUAL;
 Delimiter $$
 Create procedure Statistiche_MANUAL()
@@ -2400,7 +2399,6 @@ begin
                   );
    
 end $$
-
 Delimiter ;
 
 -- ###########################################################################################################################################
@@ -2416,33 +2414,33 @@ create trigger PuntoCollegamentoTBI
 before insert on PuntoCollegamento for each row
 begin
 
-    declare check_collegamento boolean default FALSE;
-    declare error_collegamento varchar(255) default '';
+    declare check_collegamento boolean default FALSE; -- controlla se il punto di collegamento non collega 2 volte la stessa stanza
+    declare error_collegamento varchar(255) default ''; -- messaggio di errore
 
-    declare check_tipo boolean default FALSE;
-    declare error_tipo varchar(255) default '';
+    declare check_tipo boolean default FALSE; -- controlla se il tipo di collegamento è un tipo valido
+    declare error_tipo varchar(255) default ''; -- messaggio di errore
 
-    declare check_punto_cardinale_porta boolean default FALSE;
-    declare check_punto_cardinale_finestra boolean default FALSE;
-    declare error_punto_cardinale varchar(255) default '';
+    declare check_punto_cardinale_porta boolean default FALSE; -- controlla che, se il tipo è porta, abbia il punto cardinale impostato a NULL
+    declare check_punto_cardinale_finestra boolean default FALSE; -- controlla che, se il tipo è finestra o portafinestra, abbia il punto cardinale valido
+    declare error_punto_cardinale varchar(255) default ''; -- messaggio di errore
 
-    set check_collegamento = new.collegamento1 <> new.collegamento2;
+    set check_collegamento = new.collegamento1 <> new.collegamento2; -- controlla se il punto di collegamento non collega 2 volte la stessa stanza
     if not check_collegamento then
         select concat('Una ', new.tipo, ' non può collegare una stanza con la stessa stanza.') into error_collegamento;
         signal sqlstate '45000'
         set message_text = error_collegamento;
     end if;
 
-    set check_tipo = new.tipo = 'Porta' or new.tipo = 'Finestra' or new.tipo = 'Portafinestra';
+    set check_tipo = new.tipo = 'Porta' or new.tipo = 'Finestra' or new.tipo = 'Portafinestra'; -- controlla se il tipo di collegamento è un tipo valido
     if not check_tipo then
         select concat('Il tipo del Punto di Collegamento ', new.id_collegamento, ' non è valido, i possibili valori sono: ''Porta'', ''Finestra'', '' Portafinestra''') into error_tipo;
         signal sqlstate '45000'
         set message_text = error_tipo;
     end if;
 
-    set check_punto_cardinale_porta = new.tipo = 'Porta' and new.punto_cardinale is null;
-    set check_punto_cardinale_finestra = (new.tipo = 'Finestra' or new.tipo = 'Portafinestra')
-        and (new.punto_cardinale = 'N' or new.punto_cardinale = 'NE' or new.punto_cardinale = 'E' or new.punto_cardinale = 'SE' or new.punto_cardinale = 'S' or new.punto_cardinale = 'SW' or new.punto_cardinale = 'W' or new.punto_cardinale = 'NW');
+    set check_punto_cardinale_porta = new.tipo = 'Porta' and new.punto_cardinale is null; -- controlla che, se il tipo è porta, abbia il punto cardinale impostato a NULL
+    set check_punto_cardinale_finestra = (new.tipo = 'Finestra' or new.tipo = 'Portafinestra') 
+        and (new.punto_cardinale = 'N' or new.punto_cardinale = 'NE' or new.punto_cardinale = 'E' or new.punto_cardinale = 'SE' or new.punto_cardinale = 'S' or new.punto_cardinale = 'SW' or new.punto_cardinale = 'W' or new.punto_cardinale = 'NW');  -- controlla che, se il tipo è finestra o portafinestra, abbia il punto cardinale valido
 
     if new.tipo = 'Porta' and not check_punto_cardinale_porta then
         select concat('Il Punto di Collegamento ', new.tipo, ' non ha un punto cardinale di rifermento e quindi il suo valore deve essere NULL.') into error_punto_cardinale;
@@ -2464,33 +2462,33 @@ create trigger PuntoCollegamentoTBU
 before update on PuntoCollegamento for each row
 begin
 
-    declare check_collegamento boolean default FALSE;
-    declare error_collegamento varchar(255) default '';
+    declare check_collegamento boolean default FALSE;  -- controlla se il punto di collegamento non collega 2 volte la stessa stanza
+    declare error_collegamento varchar(255) default ''; -- messaggio di errore
 
-    declare check_tipo boolean default FALSE;
-    declare error_tipo varchar(255) default '';
+    declare check_tipo boolean default FALSE; -- controlla se il tipo di collegamento è un tipo valido
+    declare error_tipo varchar(255) default ''; -- messaggio di errore
 
-    declare check_punto_cardinale_porta boolean default FALSE;
-    declare check_punto_cardinale_finestra boolean default FALSE;
-    declare error_punto_cardinale varchar(255) default '';
+    declare check_punto_cardinale_porta boolean default FALSE; -- controlla che, se il tipo è porta, abbia il punto cardinale impostato a NULL
+    declare check_punto_cardinale_finestra boolean default FALSE; -- controlla che, se il tipo è finestra o portafinestra, abbia il punto cardinale valido
+    declare error_punto_cardinale varchar(255) default ''; -- messaggio di errore
 
-    set check_collegamento = new.collegamento1 <> new.collegamento2;
+    set check_collegamento = new.collegamento1 <> new.collegamento2; -- controlla se il punto di collegamento non collega 2 volte la stessa stanza
     if not check_collegamento then
         select concat('Una ', new.tipo, ' non può collegare una stanza con la stessa stanza.') into error_collegamento;
         signal sqlstate '45000'
         set message_text = error_collegamento;
     end if;
 
-    set check_tipo = new.tipo = 'Porta' or new.tipo = 'Finestra' or new.tipo = 'Portafinestra';
+    set check_tipo = new.tipo = 'Porta' or new.tipo = 'Finestra' or new.tipo = 'Portafinestra'; -- controlla se il tipo di collegamento è un tipo valido
     if not check_tipo then
         select concat('Il tipo del Punto di Collegamento ', new.id_collegamento, ' non è valido, i possibili valori sono: ''Porta'', ''Finestra'', '' Portafinestra''') into error_tipo;
         signal sqlstate '45000'
         set message_text = error_tipo;
     end if;
 
-    set check_punto_cardinale_porta = new.tipo = 'Porta' and new.punto_cardinale is null;
+    set check_punto_cardinale_porta = new.tipo = 'Porta' and new.punto_cardinale is null; -- controlla che, se il tipo è porta, abbia il punto cardinale impostato a NULL
     set check_punto_cardinale_finestra = (new.tipo = 'Finestra' or new.tipo = 'Portafinestra')
-        and (new.punto_cardinale = 'N' or new.punto_cardinale = 'NE' or new.punto_cardinale = 'E' or new.punto_cardinale = 'SE' or new.punto_cardinale = 'S' or new.punto_cardinale = 'SW' or new.punto_cardinale = 'W' or new.punto_cardinale = 'NW');
+        and (new.punto_cardinale = 'N' or new.punto_cardinale = 'NE' or new.punto_cardinale = 'E' or new.punto_cardinale = 'SE' or new.punto_cardinale = 'S' or new.punto_cardinale = 'SW' or new.punto_cardinale = 'W' or new.punto_cardinale = 'NW');  -- controlla che, se il tipo è finestra o portafinestra, abbia il punto cardinale valido
 
     if new.tipo = 'Porta' and not check_punto_cardinale_porta then
         select concat('Il Punto di Collegamento ', new.tipo, ' non ha un punto cardinale di rifermento e quindi il suo valore deve essere NULL.') into error_punto_cardinale;
