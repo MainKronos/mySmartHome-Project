@@ -469,10 +469,10 @@ delimiter $$
 create procedure EmergencyExit(in _id_stanza int, out _txt longtext)
 begin
 
-    declare counter int default 0;
-    declare bad_end bool default false;
-    declare good_end bool default false;
-    declare check_value bool default false;
+    declare counter int default 0; -- contatore che conta i passaggi fatti
+    declare bad_end bool default false; -- vero se non ci sono vie di uscita
+    declare good_end bool default false; -- vero se esiste una via di uscita
+    declare check_value bool default false; -- controlla se _id_stanza è una stanza
 
     set check_value = _id_stanza in (
         select luogo
@@ -481,6 +481,7 @@ begin
 
     if check_value then
 
+		-- tabella che contiene solo i luoghi che permettono una via di fuga dalla casa
         drop temporary table if exists MyExit;
         create temporary table MyExit as (
             select l.id_luogo
@@ -488,12 +489,13 @@ begin
             where l.nome = 'Giardino' or l.nome = 'Piazza'
         );
 
+		-- tabella per i calcolo delle possibili strade per uscire dalla casa
         drop table if exists PathLength;
         create table PathLength(
-            id_luogo int,
-            pre_id_luogo int,
-            distanza int,
-            msg longtext,
+            id_luogo int, -- stanza di riferimento
+            pre_id_luogo int, -- stanza precedente
+            distanza int, -- distanza percorsa
+            msg longtext, -- messaggio contenente la mappa per uscire dalla stanza  _id_stanza
             primary key (id_luogo)
         );
 
@@ -504,6 +506,7 @@ begin
 
         -- ######################################################################
 
+		-- ripete finchè o non esiste una via di fuga o ne è stata trovata una
         repeat
             -- aggiornamento distanze
             replace into PathLength
@@ -598,6 +601,7 @@ begin
 
     open my_cursor;
 
+	-- aggiornamento ridondanza emergency_exit in Stanza per ogni stanza
     scan: loop
 
         fetch my_cursor into tmp_id;
@@ -661,9 +665,9 @@ create function ConsumoDispositivo(_dispositivo int, _instant datetime)
 returns int deterministic
 begin
 
-    declare consumo_dis int default 0;
+    declare consumo_dis int default 0; -- valore di ritorno della funzione
 
-    with MyLuce as (
+    with MyLuce as ( -- consumo del _dispositivo se fosse una luce
         select d.id_dispositivo as dispositivo, (d.stato * d.consumo) as consumo
         from (
             select l.id_dispositivo, al.stato, l.consumo, al.data, ifnull(lead(al.data, 1) over(
@@ -676,7 +680,7 @@ begin
         ) as d
         where _instant between d.data and d.attivita_successiva
     ),
-    MyToggle as (
+    MyToggle as ( -- consumo del _dispositivo se fosse un toggle
         select d.id_dispositivo as dispositivo, (d.stato * d.consumo) as consumo
         from (
             select t.id_dispositivo, att.stato, t.consumo, att.data, ifnull(lead(att.data, 1) over(
@@ -689,8 +693,9 @@ begin
         ) as d
         where _instant between d.data and d.attivita_successiva
     ),
-    MyCiclo as (
-        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * d.consumo as consumo
+    MyCiclo as ( -- consumo del _dispositivo se fosse un dispositivo a ciclo
+        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
+			d.consumo as consumo
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
                 partition by ac.programma
@@ -702,8 +707,8 @@ begin
         ) as d
         where _instant between d.data and d.attivita_successiva
     ),
-    MyVariabile as (
-        select d.variabile as dispositivo, d.consumo * (d.livello <> 0) as consumo
+    MyVariabile as ( -- consumo del _dispositivo se fosse un dispositivo variabile
+        select d.variabile as dispositivo, d.consumo * (d.livello <> 0) as consumo -- se il livello è zero significhe che il dispositivo è spento
         from (
             select av.variabile, p.consumo, p.livello, av.data, ifnull(lead(av.data, 1) over(
                 partition by av.variabile
@@ -715,10 +720,10 @@ begin
         ) as d
         where _instant between d.data and d.attivita_successiva
     ),
-    MyCondizionatore as (
+    MyCondizionatore as ( -- consumo del _dispositivo se fosse un condizionatore
         select c.id_dispositivo as dispositivo, (EfficienzaEnergeticaStanza(d.stanza, se.data) * abs(se.temperatura - i.temperatura)) * 
-            (time(_instant) between i.ora_inizio and i.ora_fine) * -- bool
-            (datediff(_instant, ac.Data) % ac.intervallo = 0) as consumo -- bool
+            (time(_instant) between i.ora_inizio and i.ora_fine) * -- controlla se _instant si trova nel periodo di esecuzione dell'impostazione
+            (datediff(_instant, ac.Data) % ac.intervallo = 0) as consumo -- controlla se _instant si trova nel giorno dell'esecuzione dell'impostazione
         from AttivitaCondizionatore ac
             inner join Impostazione i on i.id_impostazione = ac.impostazione
             inner join Condizionatore c on c.id_dispositivo = ac.condizionatore
@@ -735,6 +740,7 @@ begin
             and _instant between se.data and se.attivita_successiva
     )
 
+	-- unisce tutto quello che ha trovato
     select ifnull(d.consumo, 0) into consumo_dis
     from (
         select consumo
