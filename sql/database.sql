@@ -856,7 +856,7 @@ begin
     )
 
     -- unisce tutto e somma i consumi
-    select sum(d.consumo) into consumo_tot
+    select ifnull(sum(d.consumo), 0) into consumo_tot
     from (
         select consumo
         from MyLuce
