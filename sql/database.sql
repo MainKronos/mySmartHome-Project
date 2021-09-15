@@ -2751,7 +2751,7 @@ begin
         select ab.id_dispositivo, ab.id_stanza, weekday(ab.giorno) as giorno_settimana, hour(ab.giorno) as ora, count(*) over(partition by ab.id_dispositivo, id_stanza) as FreqA
         from abitudiniutenti ab
     ) as d
-    where weekday(_data) = d.giorno_settimana and hour(_data) = d.ora
+    where weekday(_data) = d.giorno_settimana and hour(_data) = d.ora and StatoDispositivo(d.id_dispositivo) = 0
     group by d.id_dispositivo, d.id_stanza, d.giorno_settimana, d.ora
     order by count(*) desc
     limit 1;
