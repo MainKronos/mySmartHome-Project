@@ -23,7 +23,7 @@ create table Utente (
     telefono char(10) not null,
 
     primary key (codice_fiscale),
-	constraint CHECK_Utente_codice_fiscale check (codice_fiscale REGEXP '([B-DF-HJ-NP-TV-Z]{3})([B-DF-HJ-NP-TV-Z]{3})(0[1-9]|1[0-2])([A-Z])(0[1-9]|[12][0-9]|3[01])([0-9A-Z]{4})([A-Z])') not enforced
+    constraint CHECK_Utente_codice_fiscale check (codice_fiscale REGEXP '([B-DF-HJ-NP-TV-Z]{3})([B-DF-HJ-NP-TV-Z]{3})(0[1-9]|1[0-2])([A-Z])(0[1-9]|[12][0-9]|3[01])([0-9A-Z]{4})([A-Z])') not enforced
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- Tabella Documento ###########################################################################################################################################
@@ -57,14 +57,14 @@ drop table if exists Notifica;
 create table Notifica (
     id_notifica int not null AUTO_INCREMENT,
     messaggio varchar(255) not null,
-	`data` datetime not null,
+    `data` datetime not null,
     accettata tinyint not null,
     account_utente varchar(255) not null,
-	id_dispositivo int,
+    id_dispositivo int,
 
     primary key (id_notifica),
     foreign key (account_utente) references Account(nome_utente) on delete cascade,
-	constraint CHECK_Notifica_accettata check (accettata between 0 and 1)
+    constraint CHECK_Notifica_accettata check (accettata between 0 and 1)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- Tabella FasciaOraria ###########################################################################################################################################
@@ -120,8 +120,8 @@ create table PuntoCollegamento (
     primary key (id_collegamento),
     foreign key (collegamento1) references Luogo(id_luogo) on delete cascade,
     foreign key (collegamento2) references Luogo(id_luogo) on delete cascade,
-	constraint CHECK_PuntoCollegamento_tipo check (tipo = 'Porta' or tipo = 'Finestra' or tipo = 'Portafinestra'),
-	constraint CHECK_PuntoCollegamento_punto_cardinale check (punto_cardinale = 'N' or punto_cardinale = 'NE' or punto_cardinale = 'E' or punto_cardinale = 'SE' or punto_cardinale = 'S' or punto_cardinale = 'SW' or punto_cardinale = 'W' or punto_cardinale = 'NW')
+    constraint CHECK_PuntoCollegamento_tipo check (tipo = 'Porta' or tipo = 'Finestra' or tipo = 'Portafinestra'),
+    constraint CHECK_PuntoCollegamento_punto_cardinale check (punto_cardinale = 'N' or punto_cardinale = 'NE' or punto_cardinale = 'E' or punto_cardinale = 'SE' or punto_cardinale = 'S' or punto_cardinale = 'SW' or punto_cardinale = 'W' or punto_cardinale = 'NW')
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- Tabella Esterno ###########################################################################################################################################
@@ -352,7 +352,7 @@ create table Impostazione (
 
     primary key (id_impostazione),
     foreign key (condizionatore) references Condizionatore(id_dispositivo) on delete cascade,
-	constraint CHECK_Impostazione_umidita check (umidita between 0 and 100)
+    constraint CHECK_Impostazione_umidita check (umidita between 0 and 100)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- Tabella AttivitaLuce ###########################################################################################################################################
@@ -369,7 +369,7 @@ create table AttivitaLuce (
     foreign key (id_attivita) references Attivita(id_attivita) on delete cascade,
     foreign key (luce) references Luce(id_dispositivo) on delete cascade,
     constraint CHECK_AttivitaLuce_stato check (stato between 0 and 1),
-	constraint CHECK_AttivitaLuce_intensita check (intensita between 0 and 100)
+    constraint CHECK_AttivitaLuce_intensita check (intensita between 0 and 100)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 -- Tabella AttivitaToggle ###########################################################################################################################################
@@ -448,11 +448,11 @@ create table LogTableBatteria (
 -- tabella AbitudiniUtenti ###########################################################################################################################################
 drop table if exists AbitudiniUtenti;
 create table AbitudiniUtenti (
-	id_dispositivo int,
-	id_stanza int,
-	giorno datetime,
+    id_dispositivo int,
+    id_stanza int,
+    giorno datetime,
 
-	primary key (id_dispositivo, id_stanza, giorno)
+    primary key (id_dispositivo, id_stanza, giorno)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
@@ -481,7 +481,7 @@ begin
 
     if check_value then
 
-		-- tabella che contiene solo i luoghi che permettono una via di fuga dalla casa
+        -- tabella che contiene solo i luoghi che permettono una via di fuga dalla casa
         drop temporary table if exists MyExit;
         create temporary table MyExit as (
             select l.id_luogo
@@ -489,7 +489,7 @@ begin
             where l.nome = 'Giardino' or l.nome = 'Piazza'
         );
 
-		-- tabella per i calcolo delle possibili strade per uscire dalla casa
+        -- tabella per i calcolo delle possibili strade per uscire dalla casa
         drop table if exists PathLength;
         create table PathLength(
             id_luogo int, -- stanza di riferimento
@@ -506,7 +506,7 @@ begin
 
         -- ######################################################################
 
-		-- ripete finchè o non esiste una via di fuga o ne è stata trovata una
+        -- ripete finchè o non esiste una via di fuga o ne è stata trovata una
         repeat
             -- aggiornamento distanze
             replace into PathLength
@@ -601,7 +601,7 @@ begin
 
     open my_cursor;
 
-	-- aggiornamento ridondanza emergency_exit in Stanza per ogni stanza
+    -- aggiornamento ridondanza emergency_exit in Stanza per ogni stanza
     scan: loop
 
         fetch my_cursor into tmp_id;
@@ -613,9 +613,9 @@ begin
         call EmergencyExit(tmp_id, tmp_msg);
         -- insert into tmp value (tmp_id, tmp_msg);
 
-		update stanza
-		set emergency_exit = tmp_msg
-		where luogo = tmp_id;
+        update stanza
+        set emergency_exit = tmp_msg
+        where luogo = tmp_id;
 
     end loop ;
 
@@ -695,7 +695,7 @@ begin
     ),
     MyCiclo as ( -- consumo del _dispositivo se fosse un dispositivo a ciclo
         select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
-			d.consumo as consumo
+            d.consumo as consumo
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
                 partition by ac.programma
@@ -740,7 +740,7 @@ begin
             and _instant between se.data and se.attivita_successiva
     )
 
-	-- unisce tutto quello che ha trovato
+    -- unisce tutto quello che ha trovato
     select ifnull(d.consumo, 0) into consumo_dis
     from (
         select consumo
@@ -771,7 +771,7 @@ begin
         from MyCondizionatore
         where dispositivo is not null
     ) as d
-	limit 1;
+    limit 1;
 
     return consumo_dis;
 
@@ -785,7 +785,7 @@ create function ConsumoTot(_instant datetime)
 returns int not deterministic
 begin
 
-    declare consumo_tot int default 0;
+    declare consumo_tot int default 0; -- valore di ritorno
 
     with MyLuce as (
         select d.id_dispositivo as dispositivo, (d.stato * d.consumo) as consumo
@@ -812,7 +812,8 @@ begin
         where _instant between d.data and d.attivita_successiva
     ),
     MyCiclo as (
-        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * d.consumo as consumo
+        select d.ciclo as dispositivo, (_instant between d.data and addtime(d.data, d.durata)) * -- controlla se _instant ricade nel range temporale del programma del dispositivo a ciclo
+            d.consumo as consumo 
         from (
             select ac.ciclo, p.durata, p.consumo, ac.data, ifnull(lead(ac.data, 1) over(
                 partition by ac.programma
@@ -824,7 +825,7 @@ begin
         where _instant between d.data and d.attivita_successiva
     ),
     MyVariabile as (
-        select d.variabile as dispositivo, d.consumo * (d.livello <> 0) as consumo
+        select d.variabile as dispositivo, d.consumo * (d.livello <> 0) as consumo -- se il livello è zero significhe che il dispositivo è spento
         from (
             select av.variabile, p.consumo, p.livello, av.data, ifnull(lead(av.data, 1) over(
                 partition by av.variabile
@@ -837,8 +838,8 @@ begin
     ),
     MyCondizionatore as (
         select c.id_dispositivo as dispositivo, (EfficienzaEnergeticaStanza(d.stanza, se.data) * abs(se.temperatura - i.temperatura)) *
-            (time(_instant) between i.ora_inizio and i.ora_fine) * -- bool
-            (datediff(ac.Data, _instant) % ac.intervallo = 0) as consumo -- bool
+            (time(_instant) between i.ora_inizio and i.ora_fine) * -- controlla se _instant si trova nel periodo di esecuzione dell'impostazione
+            (datediff(ac.Data, _instant) % ac.intervallo = 0) as consumo -- controlla se _instant si trova nel giorno dell'esecuzione dell'impostazione
         from AttivitaCondizionatore ac
             inner join Impostazione i on i.id_impostazione = ac.impostazione
             inner join Condizionatore c on c.id_dispositivo = ac.condizionatore
@@ -854,6 +855,7 @@ begin
             and _instant between se.data and se.attivita_successiva
     )
 
+    -- unisce tutto e somma i consumi
     select sum(d.consumo) into consumo_tot
     from (
         select consumo
@@ -897,16 +899,16 @@ create function Broadcast ( _Messaggio varchar(255), _IdDispositivo int)
 returns tinyint deterministic
 begin
    
-   if _IdDispositivo = -1 then
+    if _IdDispositivo = -1 then
 
-      Insert into Notifica (messaggio,data,accettata,account_utente)
-         Select _Messaggio,now(),0,nome_utente
-         From Account;
-   else
+        Insert into Notifica (messaggio,data,accettata,account_utente)
+        Select _Messaggio,now(),0,nome_utente
+        From Account;
+    else
       
-      Insert into Notifica (messaggio,data,accettata,account_utente,id_dispositivo)
-         Select _Messaggio,now(),0,nome_utente,_IdDispositivo
-         From Account;
+        Insert into Notifica (messaggio,data,accettata,account_utente,id_dispositivo)
+        Select _Messaggio,now(),0,nome_utente,_IdDispositivo
+        From Account;
     end if;  
 
    Return 0;
@@ -921,9 +923,9 @@ create function EfficienzaEnergeticaStanza(_stanza int, _instant datetime)
 returns float deterministic
 begin
 
-	declare efficienza float default 0;
+    declare efficienza float default 0; -- valore di ritorno
 
-	with TemperaturaInt as (
+    with TemperaturaInt as ( -- temperatura interna alla _stanza all'istante _instant
         select d.temperatura, d.stanza
         from (
             select s.temperatura, s.data, s.stanza, ifnull(lead(s.data, 1) over(
@@ -931,11 +933,11 @@ begin
                 order by s.data
             ),now()) as data_successiva
             from Sensore s
-			where s.stanza = _stanza
+            where s.stanza = _stanza
         ) as d
         where _instant between d.data and d.data_successiva
     ),
-	TemperaturaEx as (
+    TemperaturaEx as ( -- temperatura media esterna all'istante _instant
         select avg(d.temperatura) as temperatura
         from (
             select s.temperatura, s.data, ifnull(lead(s.data, 1) over(
@@ -947,13 +949,15 @@ begin
         where _instant between d.data and d.data_successiva
     )
 
-	select abs((100 / pow(1.05, avg(abs(ti.temperatura - te.temperatura) * s.dispersione))) - 100) into efficienza
-	from TemperaturaInt ti
-	    inner join Stanza s on ti.stanza = s.luogo
-	    cross join TemperaturaEx te
-	where s.luogo = _stanza;
+    -- 100: pessima efficienza energetica
+    -- 0: ottima efficienza energetica
+    select abs((100 / pow(1.05, avg(abs(ti.temperatura - te.temperatura) * s.dispersione))) - 100) into efficienza
+    from TemperaturaInt ti
+        inner join Stanza s on ti.stanza = s.luogo
+        cross join TemperaturaEx te
+    where s.luogo = _stanza;
 
-	return efficienza;
+    return efficienza;
 
 end $$
 delimiter ;
@@ -984,10 +988,10 @@ begin
                From FasciaOraria FO2
                Where FO2.data_attivazione <= DataVariazione
                )
-	   );
+       );
        
        if IdFasciaOraria_ is null then
-	set IdFasciaOraria_ =
+    set IdFasciaOraria_ =
        (
        Select FO3.id_fascia_oraria
        From FasciaOraria FO3
@@ -995,7 +999,7 @@ begin
              and
              (time(DataVariazione) >= time(FO3.ora_inizio) or time(DataVariazione) < time(FO3.ora_fine))
              and       
-		     FO3.data_attivazione <= DataVariazione
+             FO3.data_attivazione <= DataVariazione
              and
              FO3.data_attivazione >= all
                (
@@ -1006,7 +1010,7 @@ begin
       );
       end if;
       return IdFasciaOraria_;
-	
+    
 End $$
 Delimiter ;
 
@@ -1360,7 +1364,7 @@ Create Procedure Carica_Batteria_MANUAL()
        From Batteria
     );
     
-	set Nrecord = 
+    set Nrecord = 
     (
        Select count(*)
        From risultati
@@ -1373,30 +1377,30 @@ Create Procedure Carica_Batteria_MANUAL()
        
        end if;
        
-	   Set TempProduzioneMenoConsumo =
-	   (
-	      Select produzione_meno_consumo
-		  From risultati
-		  Where ordine = contatore
-	   );
+       Set TempProduzioneMenoConsumo =
+       (
+          Select produzione_meno_consumo
+          From risultati
+          Where ordine = contatore
+       );
        
-	   if caricaBatteria + TempProduzioneMenoConsumo >= capienzaBatteria then
+       if caricaBatteria + TempProduzioneMenoConsumo >= capienzaBatteria then
              
-	      Set caricaBatteria = capienzaBatteria;
-		  
-	   elseif caricaBatteria + TempProduzioneMenoConsumo <= 0 then
-             
-		  Set caricaBatteria = 0;
-		  
-	   else
-             
-		  Set caricaBatteria = caricaBatteria + TempProduzioneMenoConsumo;
-		  
-	   end if;
+          Set caricaBatteria = capienzaBatteria;
           
-	   Set contatore = contatore + 1;
+       elseif caricaBatteria + TempProduzioneMenoConsumo <= 0 then
+             
+          Set caricaBatteria = 0;
+          
+       else
+             
+          Set caricaBatteria = caricaBatteria + TempProduzioneMenoConsumo;
+          
+       end if;
+          
+       Set contatore = contatore + 1;
        
-	end loop carica;
+    end loop carica;
     
     Update Batteria
     Set carica = capienza * caricaBatteria/capienzaBatteria;
@@ -1442,16 +1446,16 @@ begin
       Where Data_Attivazione > now()
             and
             ((Ora_Inizio >= _OraInizio and Ora_Inizio < _OraFine)
-			or
-			(_OraFine < _OraInizio
-			and
-			(Ora_Inizio < _OraFine or Ora_Inizio >= _OraInizio)))
-			and
-			((Ora_Fine > _OraInizio and Ora_Fine <= _OraFine)
-			or
-			(_OraFine < _OraInizio
-			and
-			(Ora_Fine <= _OraFine or Ora_Fine > _OraInizio)))
+            or
+            (_OraFine < _OraInizio
+            and
+            (Ora_Inizio < _OraFine or Ora_Inizio >= _OraInizio)))
+            and
+            ((Ora_Fine > _OraInizio and Ora_Fine <= _OraFine)
+            or
+            (_OraFine < _OraInizio
+            and
+            (Ora_Fine <= _OraFine or Ora_Fine > _OraInizio)))
    )
    
    then 
@@ -1466,16 +1470,16 @@ begin
       Where Data_Attivazione > now()
             and
             ((_OraInizio > Ora_Inizio and _OraInizio < Ora_Fine)
-			or
-			(Ora_Fine < Ora_Inizio
-			and
-			(_OraInizio < Ora_Fine or _OraInizio > Ora_Inizio)))
-			and
-			((_OraFine > Ora_Inizio and _OraFine < Ora_Fine)
-			or
-			(Ora_Fine < Ora_Inizio
-			and
-			(_OraFine < Ora_Fine or _OraFine > Ora_Inizio)))
+            or
+            (Ora_Fine < Ora_Inizio
+            and
+            (_OraInizio < Ora_Fine or _OraInizio > Ora_Inizio)))
+            and
+            ((_OraFine > Ora_Inizio and _OraFine < Ora_Fine)
+            or
+            (Ora_Fine < Ora_Inizio
+            and
+            (_OraFine < Ora_Fine or _OraFine > Ora_Inizio)))
    )
    
    then 
@@ -1491,11 +1495,11 @@ begin
       from FasciaOraria
       where data_Attivazione > now()
             and
-			((Ora_Fine between _OraInizio and _OraFine)
-			or
-			(_OraFine < _OraInizio
-			and
-			(Ora_Fine < _OraFine or Ora_Fine > _OraInizio))) 
+            ((Ora_Fine between _OraInizio and _OraFine)
+            or
+            (_OraFine < _OraInizio
+            and
+            (Ora_Fine < _OraFine or Ora_Fine > _OraInizio))) 
    ),_OraInizio);
    
    Set _OraFine = ifnull( -- se l'utente inserisce una orafine che si sovrappone ad una fascia oraria esistente, questa viene aggiustata
@@ -1504,11 +1508,11 @@ begin
       from FasciaOraria
       where data_Attivazione > now()
             and
-			((Ora_Inizio between _OraInizio and _OraFine)
-			or
-			(_OraFine < _OraInizio
-			and
-			(Ora_Inizio < _OraFine or Ora_Inizio > _OraInizio))) 
+            ((Ora_Inizio between _OraInizio and _OraFine)
+            or
+            (_OraFine < _OraInizio
+            and
+            (Ora_Inizio < _OraFine or Ora_Inizio > _OraInizio))) 
    ),_OraFine);
    
    
@@ -1553,7 +1557,7 @@ begin
       then
       set finito = 1;
       end if;
-	end if;
+    end if;
    
    
   
@@ -1607,11 +1611,11 @@ begin
            Select Count(*)
            From FasciaOraria
         );
-	
+    
    if ContatoreRecord = 0 then
       signal sqlstate '45000'
-	  set message_text = 'non esistono fasce orarie da modificare';
-	
+      set message_text = 'non esistono fasce orarie da modificare';
+    
    elseif _Casa + _Batteria + _Rete <> 100 then
       signal sqlstate '45000'
       set message_text = 'La somma tra la corrente inviata alla casa, alla batteria e alla rete deve fare 100';
@@ -1645,7 +1649,7 @@ begin
          
          insert into FasciaOraria
             select 1000,_OraFine,FODM.Ora_Fine,FODM.Retribuzione,FODM.Prezzo,FODM.Account_Utente,FODM.Data_Attivazione
-			from 
+            from 
             (
                select *
                from FasciaOraria FO
@@ -1653,98 +1657,98 @@ begin
                     ImpostazioneFasciaOraria
                where FO.data_attivazione >= all
                (
-			      select FO2.data_attivazione
+                  select FO2.data_attivazione
                   from FasciaOraria FO2
-			   )
-			) FODM
-			where ((_OraInizio between FODM.Ora_Inizio and FODM.Ora_Fine)
-				  or
-				  FODM.Ora_Fine < FODM.Ora_Inizio
-				  and
-				  (_OraInizio < FODM.Ora_Fine or _OraInizio > FODM.Ora_Inizio))
+               )
+            ) FODM
+            where ((_OraInizio between FODM.Ora_Inizio and FODM.Ora_Fine)
+                  or
+                  FODM.Ora_Fine < FODM.Ora_Inizio
+                  and
+                  (_OraInizio < FODM.Ora_Fine or _OraInizio > FODM.Ora_Inizio))
                   and
                   ((_OraFine between FODM.Ora_Inizio and FODM.Ora_Fine)
-				  or
-				  FODM.Ora_Fine < FODM.Ora_Inizio
-				  and
-				  (_OraFine < FODM.Ora_Fine or _OraFine > FODM.Ora_Inizio)); 
+                  or
+                  FODM.Ora_Fine < FODM.Ora_Inizio
+                  and
+                  (_OraFine < FODM.Ora_Fine or _OraFine > FODM.Ora_Inizio)); 
                   
-		insert into ImpostazioneFasciaOraria
+        insert into ImpostazioneFasciaOraria
            select 1000,Casa,Batteria,Rete,Uso_Batteria
            from ImpostazioneFasciaOraria
            where Id_Fascia_Oraria in
            (
            select Id_Fascia_Oraria
            from
-		   (
+           (
                select *
                from FasciaOraria FO
                     natural join
                     ImpostazioneFasciaOraria
                where FO.data_attivazione >= all
                (
-			      select FO2.data_attivazione
+                  select FO2.data_attivazione
                   from FasciaOraria FO2
-			   )
-			) FODM
-			where ((_OraInizio between FODM.Ora_Inizio and FODM.Ora_Fine)
-				  or
-				  FODM.Ora_Fine < FODM.Ora_Inizio
-				  and
-				  (_OraInizio < FODM.Ora_Fine or _OraInizio > FODM.Ora_Inizio))
+               )
+            ) FODM
+            where ((_OraInizio between FODM.Ora_Inizio and FODM.Ora_Fine)
+                  or
+                  FODM.Ora_Fine < FODM.Ora_Inizio
+                  and
+                  (_OraInizio < FODM.Ora_Fine or _OraInizio > FODM.Ora_Inizio))
                   and
                   ((_OraFine between FODM.Ora_Inizio and FODM.Ora_Fine)
-				  or
-				  FODM.Ora_Fine < FODM.Ora_Inizio
-				  and
-				  (_OraFine < FODM.Ora_Fine or _OraFine > FODM.Ora_Inizio))
+                  or
+                  FODM.Ora_Fine < FODM.Ora_Inizio
+                  and
+                  (_OraFine < FODM.Ora_Fine or _OraFine > FODM.Ora_Inizio))
            );
          
          
         insert into NuovaFasciaOrariaEImpostazione (Ora_Inizio,Ora_Fine,Retribuzione,Prezzo,Account_Utente,Data_Attivazione,Casa,Batteria,Rete,Uso_Batteria)
         values (_OraInizio,_OraFine,_Retribuzione,_Prezzo,_NomeUtente,now() + interval 1 Day,_Casa,_Batteria,_Rete,_UsoBatteria);
          
-		insert into NuovaFasciaOrariaEImpostazione (Ora_Inizio,Ora_Fine,Retribuzione,Prezzo,Account_Utente,Data_Attivazione,Casa,Batteria,Rete,Uso_Batteria)
+        insert into NuovaFasciaOrariaEImpostazione (Ora_Inizio,Ora_Fine,Retribuzione,Prezzo,Account_Utente,Data_Attivazione,Casa,Batteria,Rete,Uso_Batteria)
         
 
          with FasciaOrariaDaModificare as 
-	     (
+         (
             select *
             from FasciaOraria FO
                  natural join
                  ImpostazioneFasciaOraria
             where FO.data_attivazione >= all
             (
-			   select FO2.data_attivazione
+               select FO2.data_attivazione
                from FasciaOraria FO2
-			)
+            )
          ),
          IdFasciaOrariaDaTogliere as 
          (
             select FODM.Id_Fascia_Oraria
-			from FasciaOrariaDaModificare FODM
-			where ((FODM.Ora_Inizio between _OraInizio and _OraFine)
-				  or
-				  _OraFine < _OraInizio
-				  and
-				  (FODM.Ora_Inizio < _OraFine or FODM.Ora_Inizio > _OraInizio))
+            from FasciaOrariaDaModificare FODM
+            where ((FODM.Ora_Inizio between _OraInizio and _OraFine)
+                  or
+                  _OraFine < _OraInizio
+                  and
+                  (FODM.Ora_Inizio < _OraFine or FODM.Ora_Inizio > _OraInizio))
                   and
                   ((FODM.Ora_Fine between _OraInizio and _OraFine)
-				  or
-				  _OraFine < _OraInizio
-				  and
-				  (FODM.Ora_Fine < _OraFine or FODM.Ora_Fine > _OraInizio)) 
+                  or
+                  _OraFine < _OraInizio
+                  and
+                  (FODM.Ora_Fine < _OraFine or FODM.Ora_Fine > _OraInizio)) 
          )
         
-		select FODM.Ora_Inizio,FODM.Ora_Fine,FODM.Retribuzione,FODM.Prezzo,FODM.Account_Utente,now() + interval 1 day,FODM.Casa,FODM.Batteria,FODM.Rete,FODM.Uso_Batteria
-		from FasciaOrariaDaModificare FODM
-		where FODM.Id_Fascia_Oraria not in 
+        select FODM.Ora_Inizio,FODM.Ora_Fine,FODM.Retribuzione,FODM.Prezzo,FODM.Account_Utente,now() + interval 1 day,FODM.Casa,FODM.Batteria,FODM.Rete,FODM.Uso_Batteria
+        from FasciaOrariaDaModificare FODM
+        where FODM.Id_Fascia_Oraria not in 
             (
                Select *
                From IdFasciaOrariaDaTogliere
             );
             
-		Delete from FasciaOraria
+        Delete from FasciaOraria
         where data_attivazione > now()
               or
               Id_Fascia_Oraria = 1000;
@@ -1753,39 +1757,39 @@ begin
         Delete from ImpostazioneFasciaOraria
         where id_fascia_oraria in 
            (
-		   select FO.id_fascia_oraria
+           select FO.id_fascia_oraria
            from FasciaOraria FO
            where data_attivazione > now()
                  or
                  Id_Fascia_Oraria = 1000
            ); 
            
-		Set ContatoreRecord =
+        Set ContatoreRecord =
         (
            Select Count(*)
            From FasciaOraria
         );
            
-		insert into FasciaOraria
+        insert into FasciaOraria
            select Rank() over(order by Data_Attivazione,Ora_inizio) + ContatoreRecord as Id_Fascia_Oraria,Ora_Inizio,Ora_Fine,Retribuzione,Prezzo,Account_Utente,Data_Attivazione
            from NuovaFasciaOrariaEImpostazione;
-				
+                
         Select * From FasciaOraria;
-		
+        
         Insert into ImpostazioneFasciaOraria
            Select Rank() over(order by Data_Attivazione,Ora_inizio) + ContatoreRecord,Casa,Batteria,Rete,Uso_Batteria
            From NuovaFasciaOrariaEImpostazione;
            
-		
+        
            Update FasciaOraria
            Set Ora_Fine = _OraInizio
            Where Data_Attivazione > now() 
                  and
                  ((_OraInizio > Ora_Inizio and _OraInizio < Ora_Fine)
-				  or
-				  (Ora_Fine < Ora_Inizio
-				  and
-				  (_OraInizio < Ora_Fine or _OraInizio > Ora_Inizio)));
+                  or
+                  (Ora_Fine < Ora_Inizio
+                  and
+                  (_OraInizio < Ora_Fine or _OraInizio > Ora_Inizio)));
               
         
            Update FasciaOraria
@@ -1793,11 +1797,11 @@ begin
            Where Data_Attivazione > now()
                  and
                   ((_OraFine > Ora_Inizio and _OraFine < Ora_Fine)
-				  or
-				  (Ora_Fine < Ora_Inizio
-				  and
-				  (_OraFine < Ora_Fine or _OraFine > Ora_Inizio)));
-	
+                  or
+                  (Ora_Fine < Ora_Inizio
+                  and
+                  (_OraFine < Ora_Fine or _OraFine > Ora_Inizio)));
+    
 
         drop table NuovaFasciaOrariaEImpostazione;
         
@@ -2359,40 +2363,40 @@ begin
                           ifnull(
                                    (
                                       Select round(avg(E.Produzione),2)
-							          From Energia E
-					                  Where E.data_variazione > now() - interval 1 day
+                                      From Energia E
+                                      Where E.data_variazione > now() - interval 1 day
 
                                    ),
-						        0
-					            ),
-						   ' W, di cui ',
+                                0
+                                ),
+                           ' W, di cui ',
                            ifnull(
                                     (
                                        Select round(avg(E.Produzione * IFO.rete/100),2)
                                        From Energia E
                                             Natural join
                                             ImpostazioneFasciaOraria IFO
-							           Where E.data_variazione > now() - interval 1 day
-									),
-						         0
-						         ),
-						   ' W sono andati nella rete pubblica, per cui hai guadagnato ',
-						   ifnull(
+                                       Where E.data_variazione > now() - interval 1 day
+                                    ),
+                                 0
+                                 ),
+                           ' W sono andati nella rete pubblica, per cui hai guadagnato ',
+                           ifnull(
                                     (
                                        Select round(avg(E.Produzione * IFO.rete/100 * FO.retribuzione),1)
                                        From Energia E
                                             Natural join
-							                FasciaOraria FO
+                                            FasciaOraria FO
                                             Natural join
                                             ImpostazioneFasciaOraria IFO
-									   Where E.data_variazione > now() - interval 1 day
+                                       Where E.data_variazione > now() - interval 1 day
                                     ),
-						         0
-						         ),
+                                 0
+                                 ),
                            ' Euro'
                            ), 
-			      -1 
-			      );
+                  -1 
+                  );
    
 end $$
 
@@ -2724,7 +2728,7 @@ Create event NotificaAbitudini
 on schedule every 3 hour
 starts STR_TO_DATE(CONCAT(current_date(), ' 06:00:00'), '%Y-%m-%d %H:%i:%s') do
 begin
-	if hour(now()) between 6 and 24 then
+    if hour(now()) between 6 and 24 then
         call NotificaAbitudini_MANUAL();
     end if ;
 end $$
@@ -2792,13 +2796,13 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
              right outer join
              Ciclo C
              on AC.Ciclo = C.id_dispositivo
-	    where AC.Data is null 
+        where AC.Data is null 
               or
               (
-			     AC.Data is not null 
+                 AC.Data is not null 
                  and
                  Datediff(current_date(),AC.Data) > 1 
-			  )
+              )
      ),
      DispositiviEProgrammiIdonei as    -- questa cte contiene i dispositivi a ciclo non interrompibile che hanno un programma che può essere completato entro le 18 
      (                                 -- (si presume che la produzione elettrica dopo le 18 cali drasticamente per via del tramonto del sole)
@@ -2813,7 +2817,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
               on P.ciclo = DAC.id_dispositivo
               
         where 18 - hour(now()) - minute(now())/60 > P.durata/60
-	          and 
+              and 
               hour(now()) + minute(now())/60 - 6 > P.durata/60
      )
       Select DPI.Id_Dispositivo,DPI.Consumo,DPI.Durata,DPI.Tipo
@@ -2831,19 +2835,19 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
    
    
    set ContatoreDispositiviPocoUsati =    -- qui viene calcolato il numero di dispositivi a ciclo non interrompibile che non vengono utilizzati da un giorno o più
-	 (
-		select count(distinct C.id_dispositivo)
+     (
+        select count(distinct C.id_dispositivo)
         from AttivitaCiclo AC
              right outer join
              Ciclo C
              on AC.Ciclo = C.id_dispositivo
-	    where AC.Data is null 
+        where AC.Data is null 
               or
               (
-			     AC.Data is not null 
+                 AC.Data is not null 
                  and
                  Datediff(current_date(),AC.Data) > 1 
-			  )
+              )
      );
    
    Set UsoBatteria =   -- prende l'usobatteria della fasciaoraria corrente
@@ -2855,13 +2859,13 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
                                  Select distinct E.id_fascia_oraria
                                  From Energia E
                                  Where E.data_variazione >= all 
-															 (
+                                                             (
                                                                 Select E2.data_variazione
                                                                 From Energia E2
                                                              )
                               
                               )
-	 
+     
    );
    
    Set ProduzioneCarica =  ProduzioneIstantanea() + UsoBatteria * CaricaBatteria;
@@ -2872,16 +2876,16 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
    
    Set ProduzioneCaricaConsumo = ProduzioneCarica - Consumo;
    
-	if ContatoreDispositiviPocoUsati = 0 and ProduzioneCaricaConsumo > 0 then       -- se non esistono dispositivi a ciclo non interrompibile attivabili allora ci limitiamo 
+    if ContatoreDispositiviPocoUsati = 0 and ProduzioneCaricaConsumo > 0 then       -- se non esistono dispositivi a ciclo non interrompibile attivabili allora ci limitiamo 
                                                                                     -- a segnalare all'utente una eventuale eccedenza di produzione elettrica 
         Set ProduzioneCarica = ProduzioneCarica + Broadcast(concat('hai ', ProduzioneCaricaConsumo, ' Kw disponibili, usali'),-1);
         
-	elseif ProduzioneCaricaConsumo < 0 then
+    elseif ProduzioneCaricaConsumo < 0 then
        
-	   if ProduzioneCarica/Consumo < 0.6 then  -- se l'utente sta consumando molto di più di quanto sta producendo gli viene inviata una notifica
+       if ProduzioneCarica/Consumo < 0.6 then  -- se l'utente sta consumando molto di più di quanto sta producendo gli viene inviata una notifica
            
              Set ProduzioneCarica = ProduzioneCarica +  Broadcast(concat('stai prelevando ', -ProduzioneCaricaConsumo, ' W  dalla rete'),-1);
-	   
+       
        end if;
        
      else
@@ -2891,48 +2895,48 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
         fetch cursoreOttimizzazioneConsumi into TempIdDispositivo,TempConsumo,TempDurata,TempProgramma;
         if finito = 1 then
         
-		   leave preleva;
+           leave preleva;
            
-		end if;
+        end if;
         
         if ProduzioneCaricaConsumo - TempConsumo > TempConsumo/100 * 30 
            and
            18 - hour(timer) - minute(timer)/60 > TempDurata/60
-		   and 
-		   hour(timer) + minute(timer)/60 - 6 > TempDurata/60
+           and 
+           hour(timer) + minute(timer)/60 - 6 > TempDurata/60
               
-		   then          -- se c'e abbastanza produzione da permettere l'avvio di un programma di un dispositivo a ciclo non interrompibile
+           then          -- se c'e abbastanza produzione da permettere l'avvio di un programma di un dispositivo a ciclo non interrompibile
         
            set ProduzioneCaricaConsumo = ProduzioneCaricaConsumo - TempConsumo;  -- senza ricorrere al prelievo di energia dalla rete, allora viene consigliato all'utente di avviare il programma in questione
            
-			 Set ProduzioneCarica = ProduzioneCarica + Broadcast(concat(
+             Set ProduzioneCarica = ProduzioneCarica + Broadcast(concat(
                                                                           'puoi avviare il programma ', 
-																		  TempProgramma,
+                                                                          TempProgramma,
                                                                           ' del dispositivo ',
                                                                           (
-																	         Select Nome 
-																			 From Dispositivo 
-																		     Where id_dispositivo = TempIdDispositivo
-																		  ), 
+                                                                             Select Nome 
+                                                                             From Dispositivo 
+                                                                             Where id_dispositivo = TempIdDispositivo
+                                                                          ), 
                                                                           ' che si trova in ', 
-																		  (
-																		     Select L.Nome 
-																			 From Luogo L 
-																				  inner join 
-																				  Dispositivo D 
-																				  on L.id_luogo = D.stanza
-																			 Where D.id_dispositivo = TempIdDispositivo
-																		   )
-							                                             ),TempIdDispositivo
-																 );
-			Set timer = timer + interval TempDurata minute;
-		else
+                                                                          (
+                                                                             Select L.Nome 
+                                                                             From Luogo L 
+                                                                                  inner join 
+                                                                                  Dispositivo D 
+                                                                                  on L.id_luogo = D.stanza
+                                                                             Where D.id_dispositivo = TempIdDispositivo
+                                                                           )
+                                                                         ),TempIdDispositivo
+                                                                 );
+            Set timer = timer + interval TempDurata minute;
+        else
            
            leave preleva;
            
-		end if;
+        end if;
         
-	end loop preleva;
+    end loop preleva;
     close cursoreOttimizzazioneConsumi;
     
     end if;
@@ -2946,7 +2950,7 @@ Create event OttimizzazioneConsumi
 on schedule every 3 hour
 starts STR_TO_DATE(CONCAT(current_date(), ' 06:00:00'), '%Y-%m-%d %H:%i:%s') do
 begin
-	if hour(now()) between 6 and 18 then
+    if hour(now()) between 6 and 18 then
         call OttimizzazioneConsumi_MANUAL();
     end if ;
 end $$
