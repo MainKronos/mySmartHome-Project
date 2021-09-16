@@ -1161,7 +1161,7 @@ do
    
   end $$
    
-Delimiter $$
+Delimiter ;
 
 
 
