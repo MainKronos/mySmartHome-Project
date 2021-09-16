@@ -1132,6 +1132,36 @@ End $$
 Delimiter ;
 
 
+-- Event PuliziaDatabase #####################################################################################################################
+Drop event if exists PuliziaDatabase;
+Delimiter $$
+Create Event PuliziaDatabase on schedule every 1 day starts '2021-12-12 23:55:00'
+on completion preserve disable
+do
+  begin
+  Delete from Energia 
+  Where data_variazione < now() - interval 1 month; 
+   
+  Delete from Sensore
+  Where data < now() - interval 1 month;
+   
+  Delete from SensoreEsterno
+  Where data < now() - interval 1 month;
+   
+  Delete from Attivita 
+  Where id_attivita in
+  (
+     Select id_attivita
+     From Accesso
+     Where data < now() - interval 1 month
+  );
+   
+  Delete from Notifica
+  Where data < now() - interval 1 month;
+   
+  end $$
+   
+Delimiter $$
 
 
 
@@ -2323,37 +2353,6 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
 
 end $$
 delimiter ;
-
--- Event PuliziaDatabase #####################################################################################################################
-Drop event if exists PuliziaDatabase;
-Delimiter $$
-Create Event PuliziaDatabase on schedule every 1 day starts '2021-12-12 23:55:00'
-on completion preserve disable
-do
-  begin
-  Delete from Energia 
-  Where data_variazione < now() - interval 1 month; 
-   
-  Delete from Sensore
-  Where data < now() - interval 1 month;
-   
-  Delete from SensoreEsterno
-  Where data < now() - interval 1 month;
-   
-  Delete from Attivita 
-  Where id_attivita in
-  (
-     Select id_attivita
-     From Accesso
-     Where data < now() - interval 1 month
-  );
-   
-  Delete from Notifica
-  Where data < now() - interval 1 month;
-   
-  end $$
-   
-Delimiter $$
 
 -- Procedure Statistiche_MANUAL #####################################################################################################################
 Drop procedure if exists Statistiche_MANUAL;
