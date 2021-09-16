@@ -1881,8 +1881,6 @@ end $$
 delimiter ;
 
 -- Procedure AttivazioneScena ################################################################################################################
--- Attivazione Scena Luci
-
 drop procedure if exists AttivazioneScena;
 delimiter $$
 create procedure AttivazioneScena(in _scena int)
