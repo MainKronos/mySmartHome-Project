@@ -60,6 +60,7 @@ create table Notifica (
     `data` datetime not null,
     accettata tinyint not null,
     account_utente varchar(255) not null,
+    id_dispositivo int,
 
     primary key (id_notifica),
     foreign key (account_utente) references Account(nome_utente) on delete cascade,
@@ -1012,17 +1013,26 @@ delimiter ;
 -- Function Broadcast ########################################################################################################################
 drop function if exists Broadcast;
 delimiter $$
-create function Broadcast ( _Messaggio varchar(255))
+create function Broadcast ( _Messaggio varchar(255), _IdDispositivo int)
 returns tinyint deterministic
 begin
    
-        Insert into Notifica (messaggio,data,accettata,account_utente)
-        Select _Messaggio,now(),0,nome_utente
-        From Account;
+   if _IdDispositivo = -1 then
+
+      Insert into Notifica (messaggio,data,accettata,account_utente)
+         Select _Messaggio,now(),0,nome_utente
+         From Account;
+   else
+      
+      Insert into Notifica (messaggio,data,accettata,account_utente,id_dispositivo)
+         Select _Messaggio,now(),0,nome_utente,_IdDispositivo
+         From Account;
+    end if;  
 
    Return 0;
 
 end $$
+
 delimiter ;
 
 -- Function EfficienzaEnergeticaStanza #######################################################################################################
@@ -2384,7 +2394,7 @@ begin
                                  0
                                  ),
                            ' Euro'
-                           )
+                           ),-1
                   );
    
 end $$
@@ -2693,7 +2703,7 @@ begin
             and pa.confidenza >= pruning_DeviceAnalytics -- potatura
     ) as d;
 
-    select Broadcast(txt);
+    select Broadcast(txt,-1);
     select txt;
 
     select *
@@ -2893,7 +2903,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
 		
       when(Produzione - Consumo < 200 and Produzione - Consumo > - 200) then
 		   
-	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è alta'));
+	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è alta'),-1);
 		
 	  when(Produzione - Consumo < 400 and Produzione - Consumo >= 200) then
         
@@ -2913,12 +2923,12 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
 																		    on L.id_luogo = D.stanza
 																	   Where D.id_dispositivo = IdDispositivoConsigliato
 																	)
-																   )
+																   ),IdDispositivoConsigliato
 															);
                                                                 
 	  when(Produzione - Consumo < -200 and Produzione - Consumo > -400) then
 		   
-	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è media'));
+	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è media'),-1);
            
 	  when(Produzione - Consumo >= 400) then
 		   
@@ -2938,7 +2948,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
 																			   on L.id_luogo = D.stanza
 																		  Where D.id_dispositivo = IdDispositivoConsigliato
 																	   )
-                                                                      )
+                                                                      ),IdDispositivoConsigliato
 																);
 	      
           if ContatoreDispositiviPocoUsati <> 0 then                                                            
@@ -2968,7 +2978,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
 																				  on L.id_luogo = D.stanza
 																			 Where D.id_dispositivo = TempIdDispositivo
 																		   )
-							                                             )
+							                                             ),TempIdDispositivo
 																 );
            
 		      end if;
@@ -2981,7 +2991,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
                                                                       ' stai prelevando ',
                                                                       - (Produzione + ImmissioneBatteria - Consumo),
                                                                       ' W dalla rete'
-                                                                     ));
+                                                                     ),-1);
       else begin end;     
 	  End case;
                                                                     
