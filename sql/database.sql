@@ -648,7 +648,7 @@ Create Procedure Carica_Batteria_MANUAL()
     
     insert into risultati
        
-       with energia_target as
+       with energia_target as -- si prendono i record di energia relativi all'ultima ora, e a ciascuno di essi si associa la relativa fascia oraria
        (
           Select E.sorgente,
                  E.data_variazione,
@@ -656,9 +656,9 @@ Create Procedure Carica_Batteria_MANUAL()
                  fascia_oraria_corrente(E.data_variazione) as id_fascia_oraria
                  
           From Energia E
-          Where E.data_variazione > now() - interval 80 minute
+          Where E.data_variazione > now() - interval 65 minute
        ),
-       logtable_produzione_intervallo as 
+       energia_fascia_oraria as 
        (
           Select ET.sorgente,
                  ET.data_variazione,
@@ -670,18 +670,18 @@ Create Procedure Carica_Batteria_MANUAL()
                ImpostazioneFasciaOraria IFO
                on IFO.id_fascia_oraria = ET.id_fascia_oraria
        ),
-       produzione_sorgenti_e_consumo as
-       (
-          Select LPI.data_variazione,
-                 sum(LPI.produzione_intervallo) as produzione_totale_intervallo,
-                 LPI.batteria,
-                 LPI.uso_batteria,
-                 ConsumoRange(LPI.data_variazione,LPI.data_variazione + interval 30 minute) as consumo
-           From logtable_produzione_intervallo LPI
+       produzione_sorgenti_e_consumo as  -- si raggruppa per data_variazione dato che l'aggiornamento della produzione è ad intervallo fisso (ogni 30 minuti)
+       (                                 -- e a ciascun intervallo si associa il relativo consumo
+          Select EFO.data_variazione,
+                 sum(EFO.produzione_intervallo) as produzione_totale_intervallo,
+                 EFO.batteria,
+                 EFO.uso_batteria,
+                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) as consumo
+           From energia_fascia_oraria EFO
            Group by LPI.data_variazione
         )
        
-       Select rank() over(order by PSC.data_variazione) as ordine,
+       Select rank() over(order by PSC.data_variazione) as ordine, -- si ordinano i record per data variazione
               PSC.data_variazione,
               (PSC.produzione_totale_intervallo * PSC.batteria/100 - PSC.uso_batteria * PSC.consumo) as produzione_meno_consumo
        From produzione_sorgenti_e_consumo PSC;
@@ -704,7 +704,7 @@ Create Procedure Carica_Batteria_MANUAL()
        From risultati
     );
     
-    carica:loop
+    carica:loop                     -- si scorrono tutti i record nella tabella risultati secondo l'ordine definito
        if contatore > Nrecord then
        
           leave carica;
@@ -718,11 +718,11 @@ Create Procedure Carica_Batteria_MANUAL()
           Where ordine = contatore
        );
        
-       if caricaBatteria + TempProduzioneMenoConsumo >= capienzaBatteria then
-             
+       if caricaBatteria + TempProduzioneMenoConsumo >= capienzaBatteria then -- se la produzione nell'intervallo + la carica attuale sforano la capienza massima della batteria, 
+                                                                              -- allora si pone carica = capienza per impedire che il valore di carica esca dal range massimo
           Set caricaBatteria = capienzaBatteria;
           
-       elseif caricaBatteria + TempProduzioneMenoConsumo <= 0 then
+       elseif caricaBatteria + TempProduzioneMenoConsumo <= 0 then     -- se il consumo è tale da scaricare completamente la batteria, si pone carica = 0
              
           Set caricaBatteria = 0;
           
@@ -1017,7 +1017,7 @@ create function Broadcast ( _Messaggio varchar(255), _IdDispositivo int)
 returns tinyint deterministic
 begin
    
-   if _IdDispositivo = -1 then
+   if _IdDispositivo = -1 then -- se id dispositivo = 1 vuol dire che la notifica da inserire non è un suggerimento, quindi non c'è alcun dispositivo associato
 
       Insert into Notifica (messaggio,data,accettata,account_utente)
          Select _Messaggio,now(),0,nome_utente
@@ -1648,6 +1648,11 @@ begin
     end if;
    
    
+   insert into FasciaOraria
+   values (contatoreRecord + 1,_OraInizio,_OraFine,_Retribuzione,_Prezzo,_NomeUtente,now() + interval 2 day);
+   
+   insert into ImpostazioneFasciaOraria
+   values (contatoreRecord + 1,_Casa,_Batteria,_Rete,_UsoBatteria);
   
    
    if finito = 1 then
@@ -1658,11 +1663,7 @@ begin
          values ("set di fasce orarie inserito correttamente",0,_NomeUtente);
    end if;
    
-   insert into FasciaOraria
-   values (contatoreRecord + 1,_OraInizio,_OraFine,_Retribuzione,_Prezzo,_NomeUtente,now() + interval 1 day);
    
-   insert into ImpostazioneFasciaOraria
-   values (contatoreRecord + 1,_Casa,_Batteria,_Rete,_UsoBatteria);
 end $$
 delimiter ;
 
@@ -1718,8 +1719,8 @@ begin
       set message_text = 'il nome utente inserito non esiste';
       
    else
-      create temporary table if not exists NuovaFasciaOrariaEImpostazione(
-         _Id_fascia_Oraria int default 0,
+      create temporary table if not exists NuovaFasciaOrariaEImpostazione(  -- in questa temporary table verrà inserito il set di fasce orarie che si intende modificare,
+         _Id_fascia_Oraria int default 0,                                   -- insieme alla fascia oraria appena inserita
          Ora_Inizio time not null,
          Ora_Fine time not null,
          Retribuzione float not null,
@@ -1735,14 +1736,14 @@ begin
          
          truncate table NuovaFasciaOrariaEImpostazione;
          
-         insert into FasciaOraria
+         insert into FasciaOraria  
             select 1000,_OraFine,FODM.Ora_Fine,FODM.Retribuzione,FODM.Prezzo,FODM.Account_Utente,FODM.Data_Attivazione
             from 
             (
-               select *
-               from FasciaOraria FO
-                    natural join
-                    ImpostazioneFasciaOraria
+               select *                                                -- se la fascia oraria appena inserita si trova in mezzo ad una fascia oraria già presente,
+               from FasciaOraria FO                                    -- allora è necessario "spezzare in due" la fascia oraria in questione per fare spazio a quella nuova.
+                    natural join                                       -- la fascia oraria vecchia viene reinserita temporaneamente (creando un duplicato) in FasciaOraria con
+                    ImpostazioneFasciaOraria                           -- id_fascia_oraria = 1000, di modo da essere facilmente riconoscibile e rimovibile successivamente
                where FO.data_attivazione >= all
                (
                   select FO2.data_attivazione
@@ -1761,7 +1762,7 @@ begin
                   and
                   (_OraFine < FODM.Ora_Fine or _OraFine > FODM.Ora_Inizio)); 
                   
-        insert into ImpostazioneFasciaOraria
+        insert into ImpostazioneFasciaOraria   -- viene creato un duplicato anche in ImpostazioneFasciaOraria
            select 1000,Casa,Batteria,Rete,Uso_Batteria
            from ImpostazioneFasciaOraria
            where Id_Fascia_Oraria in
@@ -1792,14 +1793,14 @@ begin
                   (_OraFine < FODM.Ora_Fine or _OraFine > FODM.Ora_Inizio))
            );
          
-         
+         -- la fascia oraria inserita dall'utente viene messa nella temporary table con data_attivazione pari al giorno successivo all'inserimento
         insert into NuovaFasciaOrariaEImpostazione (Ora_Inizio,Ora_Fine,Retribuzione,Prezzo,Account_Utente,Data_Attivazione,Casa,Batteria,Rete,Uso_Batteria)
         values (_OraInizio,_OraFine,_Retribuzione,_Prezzo,_NomeUtente,now() + interval 1 Day,_Casa,_Batteria,_Rete,_UsoBatteria);
          
         insert into NuovaFasciaOrariaEImpostazione (Ora_Inizio,Ora_Fine,Retribuzione,Prezzo,Account_Utente,Data_Attivazione,Casa,Batteria,Rete,Uso_Batteria)
         
 
-         with FasciaOrariaDaModificare as 
+         with FasciaOrariaDaModificare as  -- la fascia oraria da modificare è quella con data di attivazione più recente, ovvero quella attiva al momento della modifica
          (
             select *
             from FasciaOraria FO
@@ -1811,7 +1812,7 @@ begin
                from FasciaOraria FO2
             )
          ),
-         IdFasciaOrariaDaTogliere as 
+         IdFasciaOrariaDaTogliere as  -- gli id delle fasce orarie che si sovrappongono completamente alla fascia oraria inserita dall'utente finiscono qua dentro
          (
             select FODM.Id_Fascia_Oraria
             from FasciaOrariaDaModificare FODM
@@ -1830,8 +1831,8 @@ begin
         
         select FODM.Ora_Inizio,FODM.Ora_Fine,FODM.Retribuzione,FODM.Prezzo,FODM.Account_Utente,now() + interval 1 day,FODM.Casa,FODM.Batteria,FODM.Rete,FODM.Uso_Batteria
         from FasciaOrariaDaModificare FODM
-        where FODM.Id_Fascia_Oraria not in 
-            (
+        where FODM.Id_Fascia_Oraria not in   -- il set di fasce orarie più recente (quello da modificare) meno le fasce orarie che si sovrappongono a quella
+            (                                -- inserita dall'utente viene inserito nella temporary table
                Select *
                From IdFasciaOrariaDaTogliere
             );
@@ -1842,8 +1843,8 @@ begin
               Id_Fascia_Oraria = 1000;
               
         
-        Delete from ImpostazioneFasciaOraria
-        where id_fascia_oraria in 
+        Delete from ImpostazioneFasciaOraria   -- vengono rimossi i possibili duplicati e, in caso di chiamate consecutive di questa procedura, vengono rimossi anche tutti i set
+        where id_fascia_oraria in              -- di fasce orarie con data di attivazione futura, ovvero i risultati di una chiamata recente di questa procedura
            (
            select FO.id_fascia_oraria
            from FasciaOraria FO
@@ -1869,7 +1870,7 @@ begin
            From NuovaFasciaOrariaEImpostazione;
            
         
-           Update FasciaOraria
+           Update FasciaOraria      -- le fasce orarie che non si sovrappongono completamente alla fascia oraria inserita dall'utente vengono "corrette" modificando la loro ora
            Set Ora_Fine = _OraInizio
            Where Data_Attivazione > now() 
                  and
@@ -2679,7 +2680,7 @@ begin
     declare txt text default ''; -- variabile temporane per il messaggio
 
     -- PeriodAnalytics #################################################################################################
-    -- analisi della frequenza dei dispositivi che vngono avviati peridiocamente
+    -- analisi della frequenza dei dispositivi che vengono avviati peridiocamente
     drop table if exists PeriodAnalytics;
     create table PeriodAnalytics (
         id_dispositivo int,
@@ -2930,17 +2931,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
    (
       Select IFO.uso_batteria
       From ImpostazioneFasciaOraria IFO
-      Where IFO.id_fascia_oraria = 
-                              (
-                                 Select distinct fascia_oraria_corrente(E.data_variazione)
-                                 From Energia E
-                                 Where E.data_variazione >= all 
-															 (
-                                                                Select E2.data_variazione
-                                                                From Energia E2
-                                                             )
-                              
-                              )
+      Where IFO.id_fascia_oraria = fascia_oraria_corrente(E.data_variazione)
 	 
    );
    
