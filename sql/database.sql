@@ -612,10 +612,10 @@ begin
 end $$
 delimiter ;
 
--- Event Carica_Batteria #################################################################################################################
+-- Event CaricaBatteria #################################################################################################################
 drop event if exists CaricaBatteria;
 Delimiter $$
-create event CaricaBatteria on schedule every 1 hour starts now() 
+create event CaricaBatteria on schedule every 1 hour starts STR_TO_DATE(CONCAT(current_date(), ' 00:00:00'), '%Y-%m-%d %H:%i:%s') 
 do
     Begin
     
@@ -1125,7 +1125,7 @@ Delimiter ;
 -- Event PuliziaDatabase #####################################################################################################################
 Drop event if exists PuliziaDatabase;
 Delimiter $$
-Create Event PuliziaDatabase on schedule every 1 day starts '2021-12-12 23:55:00'
+Create Event PuliziaDatabase on schedule every 1 day starts STR_TO_DATE(CONCAT(current_date(), ' 00:00:00'), '%Y-%m-%d %H:%i:%s') 
 on completion preserve disable
 do
   begin
