@@ -1530,7 +1530,12 @@ begin
    then
       signal sqlstate '45000'
       set message_text = 'il nome utente inserito non esiste';
-   end if;
+   elseif
+     _OraInizio = _OraFine
+   then
+       signal sqlstate '45000'
+      set message_text = 'inserisci una fascia oraria valida';
+	end if;
    
    
    Set contatoreRecord =
@@ -1546,22 +1551,22 @@ begin
       Where Data_Attivazione > now()
             and
             ((Ora_Inizio >= _OraInizio and Ora_Inizio < _OraFine)
-            or
-            (_OraFine < _OraInizio
-            and
-            (Ora_Inizio < _OraFine or Ora_Inizio >= _OraInizio)))
-            and
-            ((Ora_Fine > _OraInizio and Ora_Fine <= _OraFine)
-            or
-            (_OraFine < _OraInizio
-            and
-            (Ora_Fine <= _OraFine or Ora_Fine > _OraInizio)))
+			or
+			(_OraFine < _OraInizio
+			and
+			(Ora_Inizio < _OraFine or Ora_Inizio >= _OraInizio)))
+			and
+			((Ora_Fine > _OraInizio and Ora_Fine <= _OraFine)
+			or
+			(_OraFine < _OraInizio
+			and
+			(Ora_Fine <= _OraFine or Ora_Fine > _OraInizio)))
    )
    
    then 
       
-      insert into Notifica
-      values ("la fascia oraria inserita non è valida perchè si sovrappone ad un'altra inserita in precedenza",now(),0,_NomeUtente,-1);
+      signal sqlstate '45000'
+         set message_text = "la fascia oraria inserita non è valida perchè si sovrappone ad un'altra inserita in precedenza";
       
    elseif exists( -- impedisce l'inserimento di fasce orarie contenute interamente in una fascia oraria inserita in precedenza
      
@@ -1570,22 +1575,22 @@ begin
       Where Data_Attivazione > now()
             and
             ((_OraInizio > Ora_Inizio and _OraInizio < Ora_Fine)
-            or
-            (Ora_Fine < Ora_Inizio
-            and
-            (_OraInizio < Ora_Fine or _OraInizio > Ora_Inizio)))
-            and
-            ((_OraFine > Ora_Inizio and _OraFine < Ora_Fine)
-            or
-            (Ora_Fine < Ora_Inizio
-            and
-            (_OraFine < Ora_Fine or _OraFine > Ora_Inizio)))
+			or
+			(Ora_Fine < Ora_Inizio
+			and
+			(_OraInizio < Ora_Fine or _OraInizio > Ora_Inizio)))
+			and
+			((_OraFine > Ora_Inizio and _OraFine < Ora_Fine)
+			or
+			(Ora_Fine < Ora_Inizio
+			and
+			(_OraFine < Ora_Fine or _OraFine > Ora_Inizio)))
    )
    
    then 
-   
-      insert into Notifica
-      values ("quella fascia oraria è già coperta",now(),0,_NomeUtente,-1);
+      
+      signal sqlstate '45000'
+         set message_text = "quella fascia oraria è già coperta";
    
    end if;
    
@@ -1595,11 +1600,11 @@ begin
       from FasciaOraria
       where data_Attivazione > now()
             and
-            ((Ora_Fine between _OraInizio and _OraFine)
-            or
-            (_OraFine < _OraInizio
-            and
-            (Ora_Fine < _OraFine or Ora_Fine > _OraInizio))) 
+			((Ora_Fine between _OraInizio and _OraFine)
+			or
+			(_OraFine < _OraInizio
+			and
+			(Ora_Fine < _OraFine or Ora_Fine > _OraInizio))) 
    ),_OraInizio);
    
    Set _OraFine = ifnull( -- se l'utente inserisce una orafine che si sovrappone ad una fascia oraria esistente, questa viene aggiustata
@@ -1608,11 +1613,11 @@ begin
       from FasciaOraria
       where data_Attivazione > now()
             and
-            ((Ora_Inizio between _OraInizio and _OraFine)
-            or
-            (_OraFine < _OraInizio
-            and
-            (Ora_Inizio < _OraFine or Ora_Inizio > _OraInizio))) 
+			((Ora_Inizio between _OraInizio and _OraFine)
+			or
+			(_OraFine < _OraInizio
+			and
+			(Ora_Inizio < _OraFine or Ora_Inizio > _OraInizio))) 
    ),_OraFine);
    
    
@@ -1625,12 +1630,12 @@ begin
    
    then
       
-      if( (_OraInizio <> all(Select Ora_Fine From FasciaOraria)) and (_OraFine <> all(Select Ora_Inizio From FasciaOraria)) )
+      if( (_OraInizio <> all(Select Ora_Fine From FasciaOraria Where Data_Attivazione > now())) and (_OraFine <> all(Select Ora_Inizio From FasciaOraria Where Data_Attivazione > now())) )
       
       then 
          
-         insert into Notifica
-         values ("la fascia oraria deve avere orainizio/orafine uguale ad orafine/orainizio di una fascia oraria già esistente",now(),0,_NomeUtente,-1);
+         signal sqlstate '45000'
+         set message_text = "la fascia oraria deve avere orainizio/orafine uguale ad orafine/orainizio di una fascia oraria già esistente";
       end if;
    
    end if;
@@ -1657,8 +1662,7 @@ begin
       then
       set finito = 1;
       end if;
-    end if;
-   
+	end if;
    
    insert into FasciaOraria
    values (contatoreRecord + 1,_OraInizio,_OraFine,_Retribuzione,_Prezzo,_NomeUtente,now() + interval 2 day);
@@ -1671,12 +1675,13 @@ begin
      Update FasciaOraria
      Set data_attivazione = now() + interval 1 day
      Where data_attivazione > now();
-     insert into Notifica
-         values ("set di fasce orarie inserito correttamente",now(),0,_NomeUtente,-1);
+     insert into Notifica (messaggio,data,accettata,account_utente)
+         values ("set di fasce orarie inserito correttamente",now(),0,_NomeUtente);
    end if;
    
    
 end $$
+
 delimiter ;
 
 Delimiter $$
@@ -1743,7 +1748,7 @@ begin
          Batteria int not null,
          Rete int not null,
          Uso_Batteria tinyint not null,
-         primary key(Ora_Inizio,Data_Attivazione)
+         primary key(Ora_Inizio,Ora_Fine,Data_Attivazione)
          ) Engine=InnoDB Default charset = latin1;
          
          truncate table NuovaFasciaOrariaEImpostazione;
