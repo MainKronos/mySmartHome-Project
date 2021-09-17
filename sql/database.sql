@@ -624,10 +624,11 @@ begin
 end $$
 delimiter ;
 
--- Procedure Carica_Batteria_MANUAL #################################################################################################################
-Drop Procedure If Exists Carica_Batteria_MANUAL;
+-- Event Carica_Batteria #################################################################################################################
+drop event if exists CaricaBatteria;
 Delimiter $$
-Create Procedure Carica_Batteria_MANUAL()
+create event CaricaBatteria on schedule every 1 hour starts now() 
+do
     Begin
     
     Declare caricaBatteria int default 0;
@@ -742,8 +743,8 @@ Create Procedure Carica_Batteria_MANUAL()
 end $$    
 delimiter ;
 
-drop event if exists CaricaBatteria;
-create event CaricaBatteria on schedule every 1 hour starts now() do call Carica_Batteria_MANUAL();
+
+
 
 
 -- ###########################################################################################################################################
@@ -1493,6 +1494,29 @@ begin
     limit 1;
 
     return stato_;
+
+end $$
+delimiter ;
+
+-- funzione CaricaBatteria ################################################################################################################
+drop function if exists Carica_Batteria;
+
+delimiter $$
+
+create function Carica_Batteria() 
+returns int not deterministic
+begin
+   
+   Declare carica_ int default 0;
+   
+   Set carica_ = 
+   (
+      Select carica
+      From Batteria
+      limit 1
+   );
+   
+   return carica_;
 
 end $$
 delimiter ;
