@@ -1164,6 +1164,59 @@ do
    
 Delimiter ;
 
+-- Event RegistrazioneScelte #####################################################################################################################
+Drop event if exists RegistrazioneScelte;
+Delimiter $$
+Create Event RegistrazioneScelte on schedule every 1 day starts '2021-12-12 23:55:00'
+on completion preserve disable
+do
+  begin             -- aggiorno il valore di accettata in tutte le notifiche il cui id_dispositivo identifica un dispositivo che è stato attivato entro
+                    -- 10 minuti dall'invio della notifica
+     Update Notifica
+     Set accettata = 1
+     Where id_dispositivo in 
+     (
+        Select AL.luce
+        From AttivitaLuce AL
+		Where AL.Data between data and data + interval 10 minute
+     
+     );
+     
+     Update Notifica
+     Set accettata = 1
+     Where id_dispositivo in 
+     (
+        Select ATO.luce
+        From AttivitaToggle ATO
+		Where ATO.Data between data and data + interval 10 minute
+     
+     );
+     
+     Update Notifica
+     Set accettata = 1
+     Where id_dispositivo in 
+     (
+        Select AC.luce
+        From AttivitaCiclo AC
+		Where AC.Data between data and data + interval 10 minute
+     
+     );
+     
+     Update Notifica
+     Set accettata = 1
+     Where id_dispositivo in 
+     (
+        Select AV.luce
+        From AttivitaVariabile AV
+		Where AV.Data between data and data + interval 10 minute
+     
+     );
+ 
+ 
+  end $$
+   
+Delimiter ;
+
 
 
 -- ###########################################################################################################################################
