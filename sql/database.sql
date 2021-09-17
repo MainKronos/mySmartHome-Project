@@ -651,7 +651,7 @@ do
        (
           Select ET.sorgente,
                  ET.data_variazione,
-                 ET.produzione as produzione_intervallo,
+                 ET.produzione * 0.5 as produzione_intervallo, -- T Watt moltiplicato 30 minuti = T * 0.5 Wattora
                  IFO.batteria,
                  IFO.uso_batteria
           From energia_target ET
@@ -665,15 +665,15 @@ do
                  sum(EFO.produzione_intervallo) as produzione_totale_intervallo,
                  EFO.batteria,
                  EFO.uso_batteria,
-                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) as consumo
-           From energia_fascia_oraria EFO
-           Group by LPI.data_variazione
+                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) * 0.5 as consumo 
+           From energia_fascia_oraria EFO                                                                              
+           Group by LPI.data_variazione                                                                                 
         )
        
        Select rank() over(order by PSC.data_variazione) as ordine, -- si ordinano i record per data variazione
               PSC.data_variazione,
-              (PSC.produzione_totale_intervallo * PSC.batteria/100 - PSC.uso_batteria * PSC.consumo) as produzione_meno_consumo
-       From produzione_sorgenti_e_consumo PSC;
+              (PSC.produzione_totale_intervallo * PSC.batteria/100 - PSC.uso_batteria * PSC.consumo)/220 * 1000 as produzione_meno_consumo -- divido per il voltaggio (220V) e moltiplico 
+       From produzione_sorgenti_e_consumo PSC;                                                                                             -- per 1000 per convertire da Wattora a milliampereora
      
      Set caricaBatteria = 
     (
@@ -2905,11 +2905,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
       From risultati R
    );
    
-   Set CaricaBatteria = 
-   (
-      Select sum(carica)
-      From Batteria
-   );
+   Set CaricaBatteria = Carica_Batteria * 220/1000; -- converto da mAh a Wh
    
    set ContatoreDispositiviPocoUsati =    -- qui viene calcolato il numero di dispositivi a ciclo non interrompibile che non vengono utilizzati da un giorno o più
 	 (
@@ -2997,7 +2993,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
 	      
           if ContatoreDispositiviPocoUsati <> 0 then                                                            
     
-             if Produzione + ImmissioneBatteria - Consumo - TempConsumo > TempConsumo/100 * 30 
+             if Produzione * TempDurata/60 + ImmissioneBatteria - Consumo * TempDurata/60 - TempConsumo * TempDurata/60 > (TempConsumo * TempDurata/60) /100 * 30 
                 and
                 18 - hour(now()) - minute(now())/60 > TempDurata/60
 		        and 
@@ -3033,7 +3029,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
         
 	     Set Produzione = Produzione + Broadcast(concat('L''efficienza energetica al momento è bassa',
                                                                       ' stai prelevando ',
-                                                                      - (Produzione + ImmissioneBatteria - Consumo),
+                                                                      - (Produzione + 1000 * UsoBatteria - Consumo),
                                                                       ' W dalla rete'
                                                                      ),-1);
       else begin end;     
