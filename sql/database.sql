@@ -163,7 +163,7 @@ create table Stanza (
 drop table if exists Batteria;
 create table Batteria (
     id_batteria int not null AUTO_INCREMENT,
-    capienza int not null, -- Ampere-ora
+    capienza int not null, -- milliampere-ora
     luogo int not null,
     carica int not null,
 
@@ -1006,7 +1006,7 @@ create function Broadcast ( _Messaggio varchar(255), _IdDispositivo int)
 returns tinyint deterministic
 begin
    
-   if _IdDispositivo = -1 then -- se id dispositivo = 1 vuol dire che la notifica da inserire non è un suggerimento, quindi non c'è alcun dispositivo associato
+   if _IdDispositivo = -1 then -- se id dispositivo = -1 vuol dire che la notifica da inserire non è un suggerimento, quindi non c'è alcun dispositivo associato
 
       Insert into Notifica (messaggio,data,accettata,account_utente)
          Select _Messaggio,now(),0,nome_utente
@@ -1682,7 +1682,7 @@ delimiter ;
 Delimiter $$
 Create event if not exists  EliminazioneFasciaOraria
 on schedule every 1 day
-starts '2021-12-12 23:55:00'
+starts STR_TO_DATE(CONCAT(current_date(), ' 23:55:00'), '%Y-%m-%d %H:%i:%s')
 do begin
          
          Delete from FasciaOraria
@@ -3042,7 +3042,7 @@ Drop event if exists OttimizzazioneConsumi;  -- event ogni ora dopo il calcolo d
 delimiter $$
 Create event OttimizzazioneConsumi
 on schedule every 3 hour
-starts STR_TO_DATE(CONCAT(current_date(), ' 06:00:00'), '%Y-%m-%d %H:%i:%s') do
+starts STR_TO_DATE(CONCAT(current_date(), ' 06:05:00'), '%Y-%m-%d %H:%i:%s') do
 begin
     if hour(now()) between 6 and 18 then
         call OttimizzazioneConsumi_MANUAL();
