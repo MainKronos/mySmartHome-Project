@@ -1561,7 +1561,7 @@ begin
    then 
       
       insert into Notifica
-      values ("la fascia oraria inserita non è valida perchè si sovrappone ad un'altra inserita in precedenza",0,_NomeUtente,-1);
+      values ("la fascia oraria inserita non è valida perchè si sovrappone ad un'altra inserita in precedenza",now(),0,_NomeUtente,-1);
       
    elseif exists( -- impedisce l'inserimento di fasce orarie contenute interamente in una fascia oraria inserita in precedenza
      
@@ -1585,7 +1585,7 @@ begin
    then 
    
       insert into Notifica
-      values ("quella fascia oraria è già coperta",0,_NomeUtente,-1);
+      values ("quella fascia oraria è già coperta",now(),0,_NomeUtente,-1);
    
    end if;
    
@@ -1630,7 +1630,7 @@ begin
       then 
          
          insert into Notifica
-         values ("la fascia oraria deve avere orainizio/orafine uguale ad orafine/orainizio di una fascia oraria già esistente",0,_NomeUtente,-1);
+         values ("la fascia oraria deve avere orainizio/orafine uguale ad orafine/orainizio di una fascia oraria già esistente",now(),0,_NomeUtente,-1);
       end if;
    
    end if;
@@ -1672,7 +1672,7 @@ begin
      Set data_attivazione = now() + interval 1 day
      Where data_attivazione > now();
      insert into Notifica
-         values ("set di fasce orarie inserito correttamente",0,_NomeUtente,-1);
+         values ("set di fasce orarie inserito correttamente",now(),0,_NomeUtente,-1);
    end if;
    
    
