@@ -433,18 +433,6 @@ create table AttivitaCondizionatore (
 -- ###########################################################################################################################################
 -- ###########################################################################################################################################
 
--- LogTable per il calcolo della carica delle batterie ###########################################################################################################################################
-drop table if exists LogTableBatteria;
-create table LogTableBatteria (
-    sorgente int not null,
-    data_variazione datetime not null, 
-    produzione int not null,
-    batteria int not null,
-    uso_batteria tinyint,
-
-    primary key (sorgente,data_variazione)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
 -- tabella AbitudiniUtenti ###########################################################################################################################################
 drop table if exists AbitudiniUtenti;
 create table AbitudiniUtenti (
