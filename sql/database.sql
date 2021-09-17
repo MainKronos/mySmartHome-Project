@@ -2701,8 +2701,6 @@ begin
 
     declare _supporto_ int default 0; -- utilizzata come variabile temporanea nel DeviceAnalytics e nel PeriodAnalitics
 
-    declare txt text default ''; -- variabile temporane per il messaggio
-
     -- PeriodAnalytics #################################################################################################
     -- analisi della frequenza dei dispositivi che vengono avviati peridiocamente
     drop table if exists PeriodAnalytics;
@@ -2768,32 +2766,22 @@ begin
 
      -- invio notifiche
 
-    select concat('Potresti voler avviare: ', d.disposito_main, ', ', group_concat(d.dispositivo_reference separator ', ')) into txt
+
+    select if(d.id_dispositivo is not NULL, Broadcast(d.txt, d.id_dispositivo), NULL)
     from (
-        select concat(d2.nome, ' (', da.id_disposito_main, ')') as disposito_main, concat(d1.nome, ' (', da.id_dispositivo_reference, ')') as dispositivo_reference
-        from PeriodAnalytics pa
-            inner join DeviceAnalytics da on da.id_disposito_main = pa.id_dispositivo
-            inner join dispositivo d1 on d1.id_dispositivo = da.id_dispositivo_reference
-            inner join dispositivo d2 on d2.id_dispositivo = da.id_disposito_main
-        where pa.ora = hour(now())
-            and pa.giorno_settimana = weekday(current_date)
-            and pa.confidenza >= pruning_PeriodAnalytics -- potatura
-            and pa.confidenza >= pruning_DeviceAnalytics -- potatura
+        select concat('Potresti voler avviare: ', d.disposito_main, ', ', group_concat(d.dispositivo_reference separator ', ')) as txt, d.disposito_main as id_dispositivo
+        from (
+            select concat(d2.nome, ' (', da.id_disposito_main, ')') as disposito_main, concat(d1.nome, ' (', da.id_dispositivo_reference, ')') as dispositivo_reference
+            from PeriodAnalytics pa
+                inner join DeviceAnalytics da on da.id_disposito_main = pa.id_dispositivo
+                inner join dispositivo d1 on d1.id_dispositivo = da.id_dispositivo_reference
+                inner join dispositivo d2 on d2.id_dispositivo = da.id_disposito_main
+            where pa.ora = hour(now())
+                and pa.giorno_settimana = weekday(current_date)
+                and pa.confidenza >= pruning_PeriodAnalytics -- potatura
+                and pa.confidenza >= pruning_DeviceAnalytics -- potatura
+        ) as d
     ) as d;
-
-    select Broadcast(txt,-1);
-    select txt;
-
-    select *
-    from DeviceAnalytics
-    where confidenza >= pruning_DeviceAnalytics
-    order by confidenza desc ;
-
-    select *
-    from PeriodAnalytics
-    where confidenza >= pruning_PeriodAnalytics
-    order by confidenza desc ;
-
 
     drop table TogetherDevice;
     drop table PeriodAnalytics;
