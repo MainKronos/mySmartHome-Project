@@ -2945,7 +2945,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
 	 
    );
    
-   Set Produzione = ProduzioneIstantanea();
+   Set Produzione = ProduzioneIstantanea() * (Select IFO2.casa From ImpostazioneFasciaOraria IFO2 Where IFO2.id_fascia_oraria = fascia_oraria_corrente(now()));
    
    Set ImmissioneBatteria =  UsoBatteria * CaricaBatteria;
 
