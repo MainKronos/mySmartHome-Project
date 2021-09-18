@@ -2474,8 +2474,18 @@ begin
 end $$
 Delimiter ;
 
+-- Procedure emergency_exit_read #####################################################################################################################
+drop procedure if exists emergency_exit_read;
+delimiter $$
+create procedure emergency_exit_read(in _id_stanza int, out txt_ text)
+begin
+
+    select emergency_exit into txt_
+    from stanza
+    where luogo = _id_stanza;
 
 
+end $$
 
 
 
