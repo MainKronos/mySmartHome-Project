@@ -1148,6 +1148,9 @@ do
    
   Delete from Notifica
   Where data < now() - interval 1 month;
+  
+  Delete from AbitudiniUtenti
+  Where giorno < now() - interval 1 month;
    
   end $$
    
