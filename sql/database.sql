@@ -580,13 +580,6 @@ begin
 
     declare continue handler for not found set finito = true;
 
-    -- drop temporary table if exists tmp;
-    -- create temporary table tmp(
-    --     id_stanza int,
-    --     msg longtext,
-    --     primary key (id_stanza)
-    -- );
-
     open my_cursor;
 
     -- aggiornamento ridondanza emergency_exit in Stanza per ogni stanza
