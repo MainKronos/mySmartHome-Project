@@ -2426,7 +2426,7 @@ Drop event if exists InfoGuadagni;
 Delimiter $$
 Create event InfoGuadagni
 on schedule every 1 day
-starts STR_TO_DATE(CONCAT(current_date(), '22:00:00'), '%Y-%m-%d %H:%i:%s') do
+starts STR_TO_DATE(CONCAT(current_date(), '23:55:00'), '%Y-%m-%d %H:%i:%s') do
 begin 
    
    select Broadcast(concat('Oggi le tue sorgenti hanno prodotto ',
