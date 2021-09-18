@@ -2422,9 +2422,11 @@ end $$
 delimiter ;
 
 -- Procedure Statistiche_MANUAL #####################################################################################################################
-Drop procedure if exists Statistiche_MANUAL;
+Drop event if exists InfoGuadagni;
 Delimiter $$
-Create procedure Statistiche_MANUAL()
+Create event InfoGuadagni
+on schedule every 1 day
+starts STR_TO_DATE(CONCAT(current_date(), '22:00:00'), '%Y-%m-%d %H:%i:%s') do
 begin 
    
    select Broadcast(concat('Oggi le tue sorgenti hanno prodotto ',
