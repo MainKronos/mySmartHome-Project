@@ -2601,7 +2601,7 @@ delimiter ;
 -- Data Analytics 1: AbitudiniUtenti e NotificaAbitudini ################################################################################################
 drop procedure if exists AbitudiniUtenti_FULL;
 delimiter $$
-create procedure AbitudiniUtenti_FULL()
+create procedure AbitudiniUtenti_FULL() -- creazione log table AbitudiniUtenti
 begin
 
     truncate abitudiniutenti;
@@ -2639,7 +2639,7 @@ delimiter ;
 
 drop procedure if exists AbitudiniUtenti_PARTIAL;
 delimiter $$
-create procedure AbitudiniUtenti_PARTIAL(in _id_attivita int)
+create procedure AbitudiniUtenti_PARTIAL(in _id_attivita int) -- aggiornamento log table AbitudiniUtenti
 begin
 
     insert into AbitudiniUtenti
