@@ -2941,7 +2941,7 @@ Create Procedure OttimizzazioneConsumi_MANUAL()
    (
       Select IFO.uso_batteria
       From ImpostazioneFasciaOraria IFO
-      Where IFO.id_fascia_oraria = fascia_oraria_corrente(E.data_variazione)
+      Where IFO.id_fascia_oraria = fascia_oraria_corrente(now())
 	 
    );
    
