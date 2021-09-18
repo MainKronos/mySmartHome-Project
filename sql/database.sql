@@ -666,8 +666,8 @@ do
        
        Select rank() over(order by PSC.data_variazione) as ordine, -- si ordinano i record per data variazione
               PSC.data_variazione,
-              (PSC.produzione_totale_intervallo * PSC.batteria/100 - PSC.uso_batteria * (PSC.consumo - PSC.produzione_totale_intervallo *PSC.rete))/220 * 1000 as produzione_meno_consumo -- divido per il voltaggio (220V) e moltiplico 
-       From produzione_sorgenti_e_consumo PSC;                                                                                             -- per 1000 per convertire da Wattora a milliampereora
+              (PSC.produzione_totale_intervallo * PSC.batteria/100 - PSC.uso_batteria * (PSC.consumo - (PSC.produzione_totale_intervallo - PSC.produzione_totale_intervallo * PSC.rete/100))/220 * 1000 as produzione_meno_consumo -- divido per il voltaggio (220V) e moltiplico 
+       From produzione_sorgenti_e_consumo PSC;                                                                                                                                                                                     -- per 1000 per convertire da Wattora a milliampereora
      
      Set caricaBatteria = 
     (
