@@ -659,7 +659,7 @@ do
                  EFO.casa,
                  EFO.batteria,
                  EFO.uso_batteria,
-                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) as consumo 
+                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) * 60 as consumo 
            From energia_fascia_oraria EFO                                                                              
            Group by LPI.data_variazione                                                                                 
         )
