@@ -2421,7 +2421,7 @@ in _nome_utente varchar(255), in _variabile int, in _livello int, in _data datet
 end $$
 delimiter ;
 
--- Procedure Statistiche_MANUAL #####################################################################################################################
+-- Procedure InfoGuadagni #####################################################################################################################
 Drop event if exists InfoGuadagni;
 Delimiter $$
 Create event InfoGuadagni
