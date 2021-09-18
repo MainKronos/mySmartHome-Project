@@ -720,7 +720,7 @@ do
     end loop carica;
     
     Update Batteria
-    Set carica = capienza * caricaBatteria/capienzaBatteria;
+    Set carica = caricaBatteria/capienzaBatteria;
     
 end $$    
 delimiter ;
