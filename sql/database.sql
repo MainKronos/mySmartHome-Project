@@ -2796,7 +2796,7 @@ delimiter ;
 Drop event if exists NotificaAbitudini;
 delimiter $$
 Create event NotificaAbitudini
-on schedule every 3 hour
+on schedule every 10 hour
 starts STR_TO_DATE(CONCAT(current_date(), ' 06:00:00'), '%Y-%m-%d %H:%i:%s') do
 begin
     if hour(now()) between 6 and 24 then
