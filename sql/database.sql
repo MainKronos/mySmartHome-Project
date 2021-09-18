@@ -580,13 +580,6 @@ begin
 
     declare continue handler for not found set finito = true;
 
-    -- drop temporary table if exists tmp;
-    -- create temporary table tmp(
-    --     id_stanza int,
-    --     msg longtext,
-    --     primary key (id_stanza)
-    -- );
-
     open my_cursor;
 
     -- aggiornamento ridondanza emergency_exit in Stanza per ogni stanza
@@ -665,7 +658,7 @@ do
                  sum(EFO.produzione_intervallo) as produzione_totale_intervallo,
                  EFO.rete,
                  EFO.uso_batteria,
-                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) * 0.5 as consumo 
+                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) as consumo 
            From energia_fascia_oraria EFO                                                                              
            Group by LPI.data_variazione                                                                                 
         )
@@ -2474,8 +2467,18 @@ begin
 end $$
 Delimiter ;
 
+-- Procedure emergency_exit_read #####################################################################################################################
+drop procedure if exists emergency_exit_read;
+delimiter $$
+create procedure emergency_exit_read(in _id_stanza int, out txt_ text)
+begin
+
+    select emergency_exit into txt_
+    from stanza
+    where luogo = _id_stanza;
 
 
+end $$
 
 
 
