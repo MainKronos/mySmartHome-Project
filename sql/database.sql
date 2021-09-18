@@ -658,7 +658,7 @@ do
                  sum(EFO.produzione_intervallo) as produzione_totale_intervallo,
                  EFO.batteria,
                  EFO.uso_batteria,
-                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) * 0.5 as consumo 
+                 ConsumoRange(EFO.data_variazione,EFO.data_variazione + interval 30 minute) as consumo 
            From energia_fascia_oraria EFO                                                                              
            Group by LPI.data_variazione                                                                                 
         )
