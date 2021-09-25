@@ -3,7 +3,8 @@ Progetto di Base di Dati mySmartHome
 
 Documentazione: [Documentazione.pdf](./documentazione/Documentazione.pdf)
 Diagramma ER non ristrutturato: [Schema ER NON ristrutturato.pdf](./documentazione/Schema%20ER%20NON%20ristrutturato.pdf)
-Dia
+Diagramma ER ristrutturato: [Schema ER ristrutturato.pdf](./documentazione/Schema%20ER%20ristrutturato.pdf)
+Schema logico: [Schema Logico.pdf](./documentazione/Schema%20Logico.pdf)
 
 
 ## Struttura
