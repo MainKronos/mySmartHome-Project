@@ -1,5 +1,5 @@
 # mySmartHome-Project
-Progetto di Base di Dati mySmartHome
+Progetto per l'esame di Base di Dati (anno 2020/21) del corso di Ingegneria Informatica (Triennale) dell'università di Pisa (classe L-8).
 
 - [x] Documentazione: [Documentazione.pdf](./documentazione/Documentazione.pdf)
 - [x] Diagramma ER non ristrutturato: [Schema ER NON ristrutturato.pdf](./documentazione/Schema%20ER%20NON%20ristrutturato.pdf)
